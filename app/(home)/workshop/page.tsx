@@ -244,7 +244,7 @@ export default function WorkshopPage() {
       </div>
 
       {/* CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {paginatedWebinars.map((w) => (
           <Card
             key={w._id}

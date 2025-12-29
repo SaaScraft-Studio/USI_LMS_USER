@@ -11,8 +11,8 @@ import Overview from '@/components/Overview'
 import Faculty from '@/components/Faculty'
 import FAQ from '@/components/FAQ'
 import Feedback from '@/components/Feedback'
-import Quiz from '@/components/Quiz'
-
+import QuizTab from '@/components/QuizTab'
+import Meeting from '@/components/Meeting'
 import { apiRequest } from '@/lib/apiRequest'
 import { useAuthStore } from '@/stores/authStore'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -22,7 +22,7 @@ import WebinarSkeleton from '@/components/WebinarSkeleton'
 
 /* ================= TYPES ================= */
 
-type TabType = 'overview' | 'faculty' | 'faq' | 'feedback' | 'quiz'
+type TabType = 'overview' | 'faculty' | 'faq' | 'feedback' | 'quiz' | 'meeting'
 
 interface WebinarApi {
   _id: string
@@ -236,32 +236,33 @@ export default function WebinarDetailPage() {
             </CardContent>
           </Card>
 
-          {/* TABS */}
           <Card>
-            <CardContent className="p-4">
-              <div className="flex gap-3 border-b pb-3 overflow-x-auto whitespace-nowrap no-scrollbar">
-                {(
-                  [
-                    'overview',
-                    'faculty',
-                    'faq',
-                    'feedback',
-                    'quiz',
-                  ] as TabType[]
-                ).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={`shrink-0 capitalize px-3 py-1.5 rounded-md text-sm ${
-                      tab === t
-                        ? 'bg-[#E8F3FF] text-[#1F5C9E] font-semibold'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
+  <CardContent className="p-4">
+    <div className="flex gap-3 border-b pb-3 font-bold overflow-x-auto whitespace-nowrap no-scrollbar">
+      {(
+        [
+          'overview',
+          'faculty',
+          'faq',
+          'feedback',
+          'quiz',
+          'meeting'
+        ] as TabType[]
+      ).map((t) => (
+        <button
+          key={t}
+          onClick={() => setTab(t)}
+          className={`shrink-0 capitalize px-3 py-1.5 rounded-md ${
+            tab === t
+              ? 'bg-[#E8F3FF] text-[#1F5C9E] font-bold'
+              : 'text-gray-600 hover:bg-gray-50 font-medium'
+          }`}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+
 
               <div className="mt-6">
                 {tab === 'overview' && (
@@ -278,7 +279,14 @@ export default function WebinarDetailPage() {
                 {tab === 'faculty' && <Faculty webinarId={webinarId} />}
                 {tab === 'faq' && <FAQ webinarId={webinarId} />}
                 {tab === 'feedback' && <Feedback webinarId={webinarId} />}
-                {tab === 'quiz' && <Quiz title={webinar.name} />}
+                {tab === 'quiz' && (
+                  <QuizTab
+                    webinarId={webinarId}
+                    webinarTitle={webinar.name}
+                  />
+                )}
+                {tab === 'meeting' && <Meeting webinarId={webinarId} />}
+
               </div>
             </CardContent>
           </Card>

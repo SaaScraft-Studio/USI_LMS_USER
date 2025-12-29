@@ -91,7 +91,6 @@ function SidebarComponent() {
       animate={{ width: collapsed ? 60 : 250 }}
       transition={{ duration: 0.4, ease: 'easeInOut' }}
       className="
-  bg-yellow-100
   p-2
   flex
   flex-col

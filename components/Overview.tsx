@@ -10,6 +10,7 @@ import {
   CardContent,
   CardFooter,
 } from '@/components/ui/card'
+import { Button } from './ui/button'
 
 /* ================= TYPES ================= */
 type Comment = {
@@ -171,14 +172,14 @@ export default function Overview({
                   Cancel
                 </button>
 
-                <button
+                <Button
                   type="button"
                   onClick={onAddComment}
                   disabled={posting}
-                  className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-sm"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
                 >
                   {posting ? 'Posting...' : 'Comment'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
