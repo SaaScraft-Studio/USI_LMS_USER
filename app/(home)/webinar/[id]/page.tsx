@@ -185,10 +185,10 @@ export default function WebinarDetailPage() {
       {/* Breadcrumb */}
       <div className="mb-4 text-sm">
         <button
-          onClick={() => router.push('/webinar')}
+          onClick={() => router.push('/mylearning')}
           className="text-orange-600 hover:underline"
         >
-          Webinar
+          My Learning
         </button>{' '}
         / <span className="text-gray-600">{webinar.name}</span>
       </div>

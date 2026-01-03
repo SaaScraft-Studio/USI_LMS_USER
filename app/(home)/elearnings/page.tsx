@@ -221,7 +221,7 @@ export default function CourseList() {
             key={c._id}
             className="p-0 group rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition hover:-translate-y-1 flex flex-col"
           >
-            <div className="relative h-44">
+            <div className="relative h-[250px] w-full overflow-hidden">
               <Image
                 src={c.courseImage}
                 alt={c.courseName}

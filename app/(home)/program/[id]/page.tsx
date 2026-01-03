@@ -189,10 +189,10 @@ export default function ProgramDetailPage() {
       {/* Breadcrumb */}
       <div className="mb-4 text-sm">
         <button
-          onClick={() => router.push('/program')}
+          onClick={() => router.push('/mylearning')}
           className="text-orange-600 hover:underline"
         >
-          Program
+          My Learning
         </button>{' '}
         / <span className="text-gray-600">{webinar.name}</span>
       </div>

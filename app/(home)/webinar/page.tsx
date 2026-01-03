@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { CalendarDays, Clock } from 'lucide-react'
+import { CalendarDays, Clock, Clock3 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -23,6 +23,7 @@ import { apiRequest } from '@/lib/apiRequest'
 import { toast } from 'sonner'
 import SkeletonLoading from '@/components/SkeletonLoading'
 import CountdownTimer from '@/components/CountdownTimer'
+import StatusBadge from '@/components/StatusBadge'
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -53,7 +54,7 @@ interface Webinar {
 export default function WebinarList() {
   const user = useAuthStore((state) => state.user)
 
-  const [tab, setTab] = useState<Tab>('Live')
+  const [tab, setTab] = useState<Tab>('All')
   const [q, setQ] = useState('')
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest')
   const [page, setPage] = useState(1)
@@ -250,7 +251,7 @@ export default function WebinarList() {
             key={w._id}
             className="p-0 group rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition hover:-translate-y-1 flex flex-col"
           >
-            <div className="relative h-44">
+            <div className="relative h-[250px] w-full overflow-hidden">
               <Image
                 src={w.image}
                 alt={w.name}
@@ -260,9 +261,8 @@ export default function WebinarList() {
             </div>
 
             <CardContent className="flex flex-col flex-grow">
-              <span className="mb-2 w-fit px-3 py-1 text-xs rounded-full bg-muted">
-                {w.dynamicStatus}
-              </span>
+             <StatusBadge status={w.dynamicStatus} />
+
 
               <h3 className="font-semibold text-sm line-clamp-2">
                 {w.name}

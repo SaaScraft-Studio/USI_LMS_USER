@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import {
   Search,
   CalendarDays,
@@ -11,26 +12,16 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { apiRequest } from '@/lib/apiRequest'
 import SkeletonLoading from '@/components/SkeletonLoading'
 
 /* ================= TYPES ================= */
 
-interface Course {
-  _id: string
-  courseName: string
-  courseImage: string
-  startDate: string
-  endDate: string
-  startTime: string
-  endTime: string
-}
-
-type Registration = {
-  id: string
-  course: Course
+type RegistrationItem = {
+  registrationId: string
+  type: 'course' | 'webinar'
+  details: any
   registeredOn: string
 }
 
@@ -40,11 +31,10 @@ const PAGE_SIZE = 9
 
 export default function MyLearningPage() {
   const [search, setSearch] = useState('')
-  const [courses, setCourses] = useState<Registration[]>([])
+  const [items, setItems] = useState<RegistrationItem[]>([])
   const [page, setPage] = useState(1)
   const [isFetching, setIsFetching] = useState(true)
 
-  const router = useRouter()
   const user = useAuthStore((state) => state.user)
 
   /* ================= FETCH ================= */
@@ -59,15 +49,15 @@ export default function MyLearningPage() {
       try {
         setIsFetching(true)
 
-        const res = await apiRequest<null, any>({
-          endpoint: `/api/course/registrations/${user.id}`,
+        const res = await apiRequest({
+          endpoint: '/api/users/registrations',
           method: 'GET',
         })
 
-        setCourses(res.data || [])
+        setItems(res.data || [])
       } catch (error) {
-        console.error('Failed to fetch registered courses', error)
-        setCourses([])
+        console.error('Failed to fetch registrations', error)
+        setItems([])
       } finally {
         setIsFetching(false)
       }
@@ -78,26 +68,60 @@ export default function MyLearningPage() {
 
   /* ================= SEARCH ================= */
 
-  const filteredCourses = useMemo(() => {
+  const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return courses
-    return courses.filter((item) =>
-      item.course.courseName.toLowerCase().includes(q)
+    if (!q) return items
+
+    return items.filter((item) =>
+      (item.type === 'course'
+        ? item.details.courseName
+        : item.details.name
+      )
+        ?.toLowerCase()
+        .includes(q)
     )
-  }, [search, courses])
+  }, [search, items])
 
   /* ================= PAGINATION ================= */
 
-  const totalPages = Math.ceil(filteredCourses.length / PAGE_SIZE)
+  const totalPages = Math.ceil(filteredItems.length / PAGE_SIZE)
 
-  const paginatedCourses = useMemo(() => {
+  const paginatedItems = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE
-    return filteredCourses.slice(start, start + PAGE_SIZE)
-  }, [filteredCourses, page])
+    return filteredItems.slice(start, start + PAGE_SIZE)
+  }, [filteredItems, page])
 
   useEffect(() => {
     setPage(1)
   }, [search])
+
+  /* ================= HELPERS ================= */
+
+  const getActionConfig = (item: RegistrationItem) => {
+    const id = item.details._id
+
+    if (item.type === 'course') {
+      return {
+        label: 'Go To Course',
+        href: `/elearnings/${id}/overview`,
+      }
+    }
+
+    if (item.type === 'webinar') {
+      switch (item.details.webinarType) {
+        case 'Live Operative Workshops':
+          return { label: 'Go To Workshop', href: `/workshop/${id}` }
+        case 'Smart Learning Program':
+          return { label: 'Go To Program', href: `/program/${id}` }
+        case 'USI Webinar':
+          return { label: 'Go To Webinar', href: `/webinar/${id}` }
+        default:
+          return null
+      }
+    }
+
+    return null
+  }
 
   /* ================= SKELETON ================= */
 
@@ -109,7 +133,9 @@ export default function MyLearningPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6 text-[#0d2540]">My Courses</h1>
+      <h1 className="text-2xl font-semibold mb-6 text-[#0d2540]">
+        My Learning
+      </h1>
 
       {/* Search */}
       <div className="relative mb-8 w-full max-w-sm">
@@ -118,85 +144,65 @@ export default function MyLearningPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by title"
-          className="
-            pl-10 pr-5 py-2 w-full
-            border rounded-lg
-            focus:outline-none
-            focus:ring-2 focus:ring-blue-500
-          "
+          className="pl-10 pr-5 py-2 w-full border rounded-lg focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       {/* Cards */}
-      {paginatedCourses.length > 0 && (
+      {paginatedItems.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {paginatedCourses.map(({ id, course }) => (
-            <Card
-              key={id}
-              className="
-              p-0  
-              group
-                rounded-2xl
-                overflow-hidden
-                bg-white
-                shadow-md
-                hover:shadow-xl
-                transition-all duration-300
-                hover:-translate-y-1
-                flex flex-col
-              "
-            >
-              {/* Image */}
-              <div className="relative h-44 w-full overflow-hidden">
-                <Image
-                  src={course.courseImage || '/avatar.png'}
-                  alt={course.courseName}
-                  fill
-                  className="
-                    object-fit
-                    transition-transform duration-500
-                    group-hover:scale-110
-                  "
-                />
-                <div
-                  className="
-                  absolute inset-0
-                  bg-black/40
-                  opacity-0
-                  group-hover:opacity-100
-                  transition-opacity
-                  flex items-center justify-center
-                "
-                ></div>
-              </div>
+          {paginatedItems.map((item) => {
+            const { details } = item
+            const action = getActionConfig(item)
 
-              <CardContent className="p-4 flex flex-col flex-grow">
-                <div className="text-xs text-gray-600 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <CalendarDays size={14} />
-                    {course.startDate} – {course.endDate}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} />
-                    {course.startTime} – {course.endTime}
-                  </div>
+            return (
+              <Card
+                key={item.registrationId}
+                className="p-0 group rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition hover:-translate-y-1 flex flex-col"
+              >
+                {/* Image */}
+                <div className="relative h-[250px] w-full overflow-hidden">
+                  <Image
+                    src={
+                      details.courseImage ||
+                      details.image ||
+                      '/avatar.png'
+                    }
+                    alt={details.courseName || details.name}
+                    fill
+                    className="object-fit transition-transform duration-500 group-hover:scale-110"
+                  />
                 </div>
 
-                <h3 className="mt-3 font-semibold text-sm line-clamp-2">
-                  {course.courseName}
-                </h3>
-              </CardContent>
+                <CardContent className="flex-grow">
+                  <div className="text-xs text-gray-600 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays size={14} />
+                      {details.startDate} – {details.endDate}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} />
+                      {details.startTime} – {details.endTime}
+                    </div>
+                  </div>
 
-              <CardFooter className="p-4 pt-0">
-                <Button
-                  onClick={() => router.push(`/elearnings/${course._id}/overview`)}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  Go to Course
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                  <h3 className="mt-3 font-semibold text-sm line-clamp-2">
+                    {details.courseName || details.name}
+                  </h3>
+                </CardContent>
+
+                {action && (
+                  <CardFooter className="p-4 pt-0">
+                    <Link href={action.href} className="w-full">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                        {action.label}
+                      </Button>
+                    </Link>
+                  </CardFooter>
+                )}
+              </Card>
+            )
+          })}
         </div>
       )}
 
@@ -227,9 +233,9 @@ export default function MyLearningPage() {
         </div>
       )}
 
-      {filteredCourses.length === 0 && (
+      {filteredItems.length === 0 && (
         <p className="text-center text-gray-500 mt-10">
-          No registered courses found.
+          No registrations found.
         </p>
       )}
     </div>

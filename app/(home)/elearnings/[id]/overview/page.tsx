@@ -112,11 +112,14 @@ export default function ElearningDetailPage() {
   return (
     <div className="max-w-[1320px] mx-auto px-6 py-6 space-y-8">
       {/* BREADCRUMB */}
-      <div className="text-sm text-gray-500">
-        E-learning Courses &gt;{' '}
-        <span className="text-blue-600 font-medium">
-          {course.courseName}
-        </span>
+      <div className="mb-4 text-sm">
+        <button
+          onClick={() => router.push('/mylearning')}
+          className="text-orange-600 hover:underline"
+        >
+          My Learning
+        </button>{' '}
+        / <span className="text-gray-600">{course.courseName}</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6">
