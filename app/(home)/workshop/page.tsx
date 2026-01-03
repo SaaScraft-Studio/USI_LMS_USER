@@ -384,7 +384,7 @@ export default function WorkshopPage() {
               <Button
                 onClick={handleRegister}
                 disabled={submitting}
-                className="w-full bg-[#1F5C9E]"
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
                 {submitting ? 'Submitting...' : 'Submit'}
               </Button>

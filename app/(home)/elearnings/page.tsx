@@ -334,14 +334,14 @@ export default function CourseList() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 disabled={submitting}
-                placeholder="USI No | Email | Mobile"
+                placeholder="USI Number | Email | Mobile"
                 className="w-full border rounded px-4 py-2"
               />
 
               <Button
                 onClick={handleRegister}
                 disabled={submitting}
-                className="w-full bg-[#1F5C9E]"
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
                 {submitting ? 'Submitting...' : 'Submit'}
               </Button>
