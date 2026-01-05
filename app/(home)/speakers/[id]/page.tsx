@@ -193,51 +193,47 @@ export default function SpeakerDetailsPage() {
             className="p-0 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition flex flex-col"
           >
             {/* IMAGE */}
-           <div className="relative h-[250px] w-full overflow-hidden">
-                         <Image
-                           src={w.image}
-                           alt={w.name}
-                           fill
-                           className="object-fit transition-transform duration-500 group-hover:scale-110"
-                         />
-                       </div>
-                       
+            <div className="relative h-[250px] w-full overflow-hidden">
+              <Image
+                src={w.image}
+                alt={w.name}
+                fill
+                className="object-fit transition-transform duration-500 group-hover:scale-110"
+              />
+            </div>
+
 
             {/* CONTENT */}
             <CardContent className="flex flex-col flex-grow">
-                          <StatusBadge status={w.dynamicStatus} />
-            
-            
-                          <h3 className="font-semibold text-sm line-clamp-2">
-                            {w.name}
-                          </h3>
-            
-                          {w.dynamicStatus === 'Upcoming' && (
-                            <CountdownTimer
-                              startDate={w.startDate}
-                              startTime={w.startTime}
-                            />
-                          )}
-            
-                          <div className="mt-3 text-xs text-gray-600 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <CalendarDays size={14} />
-                              {w.startDate} – {w.endDate}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock size={14} />
-                              {w.startTime} – {w.endTime}
-                            </div>
-                          </div>
-                        </CardContent>
+              <StatusBadge status={w.dynamicStatus} />
 
-            {/* FOOTER / CTA */}
+
+              <h3 className="font-semibold text-sm line-clamp-2">
+                {w.name}
+              </h3>
+
+              {w.dynamicStatus === 'Upcoming' && (
+                <CountdownTimer
+                  startDate={w.startDate}
+                  startTime={w.startTime}
+                />
+              )}
+
+              <div className="mt-3 text-xs text-gray-600 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CalendarDays size={14} />
+                  {w.startDate} – {w.endDate}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock size={14} />
+                  {w.startTime} – {w.endTime}
+                </div>
+              </div>
+            </CardContent>
+
+
             <CardFooter className="p-4 pt-0">
-              {w.dynamicStatus === 'Past' ? (
-                <Button disabled className="w-full text-xs">
-                  Registration Closed
-                </Button>
-              ) : registeredIds.includes(w._id) ? (
+              {registeredIds.includes(w._id) ? (
                 <Button
                   onClick={() => router.push(getWebinarDetailsUrl(w))}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-xs"
@@ -250,7 +246,7 @@ export default function SpeakerDetailsPage() {
                     setSelectedWebinar(w)
                     setDialogOpen(true)
                   }}
-                  className={`w-full text-xs ${w.registrationType === 'free'
+                  className={`w-full ${w.registrationType === 'free'
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-orange-500 hover:bg-orange-600'
                     }`}
