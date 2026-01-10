@@ -33,17 +33,11 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
 /* -------------------------------------------------------------------------- */
 const OTP_EXPIRY = 120 // 2 min
-const RESEND_LIMIT = 3
-const LOCK_DURATION = 3600 // 60 min
-const MAX_WRONG_ATTEMPTS = 3
-const WRONG_OTP_LOCK = 300 // 5 min
-
 const STORAGE_KEY = 'login-otp-state'
 
 /* -------------------------------------------------------------------------- */
@@ -63,17 +57,11 @@ type OtpValues = z.infer<typeof OtpSchema>
 /* -------------------------------------------------------------------------- */
 /*                                  HELPERS                                   */
 /* -------------------------------------------------------------------------- */
-const buildLoginPayload = (
-  identifier: string,
-  channel: 'email' | 'sms'
-) => {
-  if (/^\d{10}$/.test(identifier))
-    return { mobile: identifier, channel }
-
+const buildLoginPayload = (identifier: string) => {
+  if (/^\d{10}$/.test(identifier)) return { mobile: identifier }
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier))
-    return { email: identifier, channel }
-
-  return { membershipNumber: identifier, channel }
+    return { email: identifier }
+  return { membershipNumber: identifier }
 }
 
 const formatTime = (s: number) =>
@@ -88,15 +76,8 @@ export default function LoginForm() {
 
   const [step, setStep] = useState<'LOGIN' | 'OTP'>('LOGIN')
   const [userId, setUserId] = useState<string | null>(null)
-
   const [otpTimer, setOtpTimer] = useState(OTP_EXPIRY)
-  const [resendCount, setResendCount] = useState(0)
-  const [isLocked, setIsLocked] = useState(false)
-  const [lockTimer, setLockTimer] = useState(LOCK_DURATION)
-  const [channel, setChannel] = useState<'email' | 'sms'>('email')
-
-  const [wrongAttempts, setWrongAttempts] = useState(0)
-  const [wrongLockTimer, setWrongLockTimer] = useState(0)
+  const [sendingOtp, setSendingOtp] = useState(false)
 
   /* ----------------------------- FORMS ----------------------------- */
   const loginForm = useForm<LoginValues>({
@@ -119,11 +100,6 @@ export default function LoginForm() {
     setStep(s.step ?? 'LOGIN')
     setUserId(s.userId ?? null)
     setOtpTimer(s.otpTimer ?? OTP_EXPIRY)
-    setResendCount(s.resendCount ?? 0)
-    setIsLocked(s.isLocked ?? false)
-    setLockTimer(s.lockTimer ?? LOCK_DURATION)
-    setWrongAttempts(s.wrongAttempts ?? 0)
-    setWrongLockTimer(s.wrongLockTimer ?? 0)
   }, [])
 
   useEffect(() => {
@@ -133,44 +109,18 @@ export default function LoginForm() {
         step,
         userId,
         otpTimer,
-        resendCount,
-        isLocked,
-        lockTimer,
-        wrongAttempts,
-        wrongLockTimer,
       })
     )
-  }, [
-    step,
-    userId,
-    otpTimer,
-    resendCount,
-    isLocked,
-    lockTimer,
-    wrongAttempts,
-    wrongLockTimer,
-  ])
+  }, [step, userId, otpTimer])
 
   /* -------------------------------------------------------------------------- */
-  /*                                  TIMERS                                   */
+  /*                                  TIMER                                    */
   /* -------------------------------------------------------------------------- */
   useEffect(() => {
     if (step !== 'OTP' || otpTimer <= 0) return
     const i = setInterval(() => setOtpTimer((t) => t - 1), 1000)
     return () => clearInterval(i)
   }, [step, otpTimer])
-
-  useEffect(() => {
-    if (!isLocked || lockTimer <= 0) return
-    const i = setInterval(() => setLockTimer((t) => t - 1), 1000)
-    return () => clearInterval(i)
-  }, [isLocked, lockTimer])
-
-  useEffect(() => {
-    if (wrongLockTimer <= 0) return
-    const i = setInterval(() => setWrongLockTimer((t) => t - 1), 1000)
-    return () => clearInterval(i)
-  }, [wrongLockTimer])
 
   /* -------------------------------------------------------------------------- */
   /*                        AUTO-PASTE OTP (WEB OTP API)                        */
@@ -200,15 +150,14 @@ export default function LoginForm() {
   /* -------------------------------------------------------------------------- */
   /*                              SEND OTP                                     */
   /* -------------------------------------------------------------------------- */
-  const sendOtp = async (isResend = false) => {
+  const sendOtp = async () => {
     const identifier = loginForm.getValues('identifier')
-    const payload = buildLoginPayload(identifier, channel)
+    const payload = buildLoginPayload(identifier)
 
     try {
-      const res = await apiRequest<
-        typeof payload,
-        { userId: string }
-      >({
+      setSendingOtp(true)
+
+      const res = await apiRequest<typeof payload, { userId: string }>({
         endpoint: '/api/users/login',
         method: 'POST',
         body: payload,
@@ -217,20 +166,13 @@ export default function LoginForm() {
       setUserId(res.userId)
       setStep('OTP')
       setOtpTimer(OTP_EXPIRY)
-      setWrongAttempts(0)
-      setWrongLockTimer(0)
+      otpForm.reset()
 
-      if (!isResend) {
-        setResendCount(0)
-        setIsLocked(false)
-        setLockTimer(LOCK_DURATION)
-      } else {
-        setResendCount((c) => c + 1)
-      }
-
-      toast.success(`OTP sent via ${channel.toUpperCase()}`)
+      toast.success('OTP sent successfully')
     } catch (e: any) {
       toast.error(e.message || 'Failed to send OTP')
+    } finally {
+      setSendingOtp(false)
     }
   }
 
@@ -238,16 +180,8 @@ export default function LoginForm() {
   /*                              RESEND OTP                                   */
   /* -------------------------------------------------------------------------- */
   const handleResendOtp = async () => {
-    if (otpTimer > 0 || isLocked) return
-
-    if (resendCount >= RESEND_LIMIT) {
-      setIsLocked(true)
-      setLockTimer(LOCK_DURATION)
-      toast.error('Too many OTP requests. Try again after 60 minutes.')
-      return
-    }
-
-    await sendOtp(true)
+    if (otpTimer > 0) return
+    await sendOtp()
   }
 
   /* -------------------------------------------------------------------------- */
@@ -255,7 +189,6 @@ export default function LoginForm() {
   /* -------------------------------------------------------------------------- */
   const handleVerifyOtp = async (values: OtpValues) => {
     if (!userId) return
-    if (wrongLockTimer > 0) return
 
     try {
       const res = await apiRequest<
@@ -272,17 +205,9 @@ export default function LoginForm() {
       toast.success('Login successful')
       router.push('/mylearning')
     } catch (e: any) {
-      const attempts = wrongAttempts + 1
-      setWrongAttempts(attempts)
-
-      if (attempts >= MAX_WRONG_ATTEMPTS) {
-        setWrongLockTimer(WRONG_OTP_LOCK)
-        toast.error('Too many wrong OTP attempts. Try again after 15 minutes.')
-      } else {
-        otpForm.setError('otp', {
-          message: `Invalid OTP. ${MAX_WRONG_ATTEMPTS - attempts} attempts left.`,
-        })
-      }
+      otpForm.setError('otp', {
+        message: e.message || 'Invalid OTP',
+      })
     }
   }
 
@@ -295,16 +220,14 @@ export default function LoginForm() {
       <div className="flex flex-col justify-between p-6 md:p-10">
         <div>
           <CardHeader className="px-0">
-            <CardTitle className="text-2xl text-orange-700">
-              Login
-            </CardTitle>
+            <CardTitle className="text-2xl text-orange-700">Login</CardTitle>
           </CardHeader>
 
           <CardContent className="px-0 space-y-4">
             {step === 'LOGIN' && (
               <Form {...loginForm}>
                 <form
-                  onSubmit={loginForm.handleSubmit(() => sendOtp())}
+                  onSubmit={loginForm.handleSubmit(sendOtp)}
                   className="space-y-4"
                 >
                   <FormField
@@ -316,27 +239,21 @@ export default function LoginForm() {
                           Login using Membership Number / Email / Mobile
                         </FormLabel>
                         <FormControl>
-                          <Input {...field}
-                          placeholder='Membership Number / Email / Mobile' />
+                          <Input
+                            {...field}
+                            placeholder="Membership Number / Email / Mobile"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <ToggleGroup
-                    type="single"
-                    value={channel}
-                    onValueChange={(v) =>
-                      v && setChannel(v as 'email' | 'sms')
-                    }
+                  <Button
+                    className="w-full bg-orange-600 hover:bg-orange-700"
+                    disabled={sendingOtp}
                   >
-                    <ToggleGroupItem value="email">Email</ToggleGroupItem>
-                    <ToggleGroupItem value="sms">SMS</ToggleGroupItem>
-                  </ToggleGroup>
-
-                  <Button className="w-full bg-orange-600 hover:bg-orange-700">
-                    Send OTP
+                    {sendingOtp ? 'Sending…' : 'Send OTP'}
                   </Button>
                 </form>
               </Form>
@@ -344,70 +261,65 @@ export default function LoginForm() {
 
             {step === 'OTP' && (
               <>
-                {wrongLockTimer > 0 && (
-                  <p className="text-xs text-center text-red-600">
-                    Too many wrong attempts. Try again in{' '}
-                    {formatTime(wrongLockTimer)}
-                  </p>
-                )}
                 <Form {...otpForm}>
                   <form className="space-y-4">
                     <FormField
                       control={otpForm.control}
                       name="otp"
                       render={() => (
-                        <InputOTP
-                          maxLength={6}
-                          onChange={(v) => {
-                            const value = v.replace(/\D/g, '')
-                            otpForm.setValue('otp', value, {
-                              shouldValidate: true,
-                            })
-
-                            if (value.length === 6) {
-                              otpForm.trigger('otp').then((ok) => {
-                                if (ok) handleVerifyOtp({ otp: value })
+                        <div className="flex justify-center w-full overflow-x-hidden">
+                          <InputOTP
+                            maxLength={6}
+                            onChange={(v) => {
+                              const value = v.replace(/\D/g, '')
+                              otpForm.setValue('otp', value, {
+                                shouldValidate: true,
                               })
-                            }
-                          }}
-                        >
-                          <InputOTPGroup>
-                            {[0, 1, 2, 3, 4, 5].map((i) => (
-                              <InputOTPSlot key={i} index={i} />
-                            ))}
-                          </InputOTPGroup>
-                        </InputOTP>
+
+                              if (value.length === 6) {
+                                otpForm.trigger('otp').then((ok) => {
+                                  if (ok) handleVerifyOtp({ otp: value })
+                                })
+                              }
+                            }}
+                          >
+                            <InputOTPGroup>
+                              {[0, 1, 2, 3, 4, 5].map((i) => (
+                                <InputOTPSlot key={i} index={i} />
+                              ))}
+                            </InputOTPGroup>
+                          </InputOTP>
+                        </div>
                       )}
                     />
-
                     <FormMessage />
                   </form>
                 </Form>
 
-                {!isLocked && (
-                  <p className="text-xs text-center text-gray-500">
-                    {otpTimer > 0
-                      ? `Resend OTP in ${formatTime(otpTimer)}`
-                      : 'Didn’t receive OTP?'}
-                  </p>
-                )}
+                <p className="text-xs text-center text-gray-500 flex justify-center gap-2">
+                  {otpTimer > 0 ? (
+                    <>Resend OTP in {formatTime(otpTimer)}</>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      className="underline"
+                    >
+                      Resend OTP
+                    </button>
+                  )}
 
-                {isLocked && (
-                  <p className="text-xs text-center text-red-600">
-                    Too many OTP requests. Try again in{' '}
-                    {formatTime(lockTimer)}
-                  </p>
-                )}
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  disabled={otpTimer > 0 || isLocked}
-                  onClick={handleResendOtp}
-                >
-                  Resend OTP
-                </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      otpForm.reset()
+                      setStep('LOGIN')
+                    }}
+                    className="underline text-orange-600"
+                  >
+                    Wrong Number?
+                  </button>
+                </p>
               </>
             )}
           </CardContent>

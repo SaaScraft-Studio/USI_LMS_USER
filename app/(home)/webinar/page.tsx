@@ -211,8 +211,8 @@ export default function WebinarList() {
             key={t}
             onClick={() => setTab(t)}
             className={`pb-1 text-sm font-medium ${tab === t
-                ? 'text-[#1F5C9E] border-b-2 border-[#1F5C9E]'
-                : 'text-gray-500 hover:text-[#1F5C9E]'
+                ? 'text-orange-600 hover:text-orange-700 border-b-2 border-orange-600'
+                : 'text-gray-500 hover:text-gray-600'
               }`}
           >
             {t}

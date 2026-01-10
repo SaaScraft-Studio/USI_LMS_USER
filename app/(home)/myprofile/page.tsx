@@ -193,7 +193,6 @@ export default function MyProfilePage() {
                     Verified User
                   </Badge>
 
-
                   {lastUpdated && (
                     <p className="mt-2 text-xs text-muted-foreground">
                       Last updated on{' '}
@@ -204,10 +203,28 @@ export default function MyProfilePage() {
 
                 {/* INFO GRID */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 text-sm">
-                  <Info icon={<Mail size={14} />} label="Email" value={form.email} />
-                  <Info icon={<Phone size={14} />} label="Mobile" value={form.mobile} />
-                  <Info icon={<Building2 size={14} />} label="Affiliation" value={form.affiliationHospital} />
-                  <Info icon={<MapPin size={14} />} label="Location" value={`${form.city || ''} ${form.state || ''}, ${form.country}`} />
+                  <Info
+                    icon={<Mail size={14} />}
+                    label="Email"
+                    value={form.email}
+                  />
+                  <Info
+                    icon={<Phone size={14} />}
+                    label="Mobile"
+                    value={form.mobile}
+                  />
+                  <Info
+                    icon={<Building2 size={14} />}
+                    label="Affiliation"
+                    value={form.affiliationHospital}
+                  />
+                  <Info
+                    icon={<MapPin size={14} />}
+                    label="Location"
+                    value={`${form.city || ''} ${form.state || ''}, ${
+                      form.country
+                    }`}
+                  />
                 </div>
 
                 <div className="flex justify-center mt-6">
@@ -232,14 +249,21 @@ export default function MyProfilePage() {
             {/* PHOTO CHANGE */}
             <div className="flex flex-col items-center">
               <div className="relative w-28 h-28 rounded-full overflow-hidden border">
-                <img src={previewPhoto} className="w-full h-full object-cover" />
+                <img
+                  src={previewPhoto}
+                  className="w-full h-full object-cover"
+                />
               </div>
 
-              <Label htmlFor="photo" className="mt-2 cursor-pointer text-orange-600 flex items-center gap-1">
+              <Label
+                htmlFor="photo"
+                className="mt-2 cursor-pointer text-orange-600 flex items-center gap-1"
+              >
                 <Camera size={14} /> Change Photo
               </Label>
               <p className="mt-2 text-sm text-gray-500">
-                Profile image must be less than <span className="font-medium text-gray-700">5&nbsp;MB</span>.
+                Profile image must be less than{' '}
+                <span className="font-medium text-gray-700">5&nbsp;MB</span>.
               </p>
 
               <Input
@@ -268,23 +292,41 @@ export default function MyProfilePage() {
                 ] as [keyof ProfileData, string][]
               ).map(([key, label]) => (
                 <div key={key}>
-                  <Label>{label}</Label>
+                  <Label className="mb-2">{label}</Label>
                   <Input
                     value={form[key] || ''}
                     disabled={READ_ONLY_FIELDS.includes(key)}
                     onChange={(e) => handleChange(key, e.target.value)}
-                    className={READ_ONLY_FIELDS.includes(key) ? 'bg-gray-100' : ''}
+                    className={
+                      READ_ONLY_FIELDS.includes(key) ? 'bg-gray-100' : ''
+                    }
                   />
                 </div>
               ))}
             </div>
 
             <div className="flex justify-center gap-4">
-              <Button variant="outline" onClick={() => setIsEditMode(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditMode(false)
+                  setPhotoFile(null)
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isUpdating} className="bg-orange-600 hover:bg-orange-700">
-                {isUpdating ? <Loader2 className="animate-spin" /> : 'Update Profile'}
+
+              <Button
+                type="submit"
+                disabled={isUpdating}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {isUpdating ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  'Update Profile'
+                )}
               </Button>
             </div>
           </motion.form>

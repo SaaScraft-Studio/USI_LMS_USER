@@ -210,10 +210,11 @@ export default function WorkshopPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`pb-1 text-sm font-medium ${tab === t
-                ? 'text-[#1F5C9E] border-b-2 border-[#1F5C9E]'
-                : 'text-gray-500 hover:text-[#1F5C9E]'
-              }`}
+            className={`pb-1 text-sm font-medium ${
+              tab === t
+                ? 'text-orange-600 hover:text-orange-700 border-b-2 border-orange-600'
+                : 'text-gray-500 hover:text-gray-600'
+            }`}
           >
             {t}
           </button>
@@ -262,9 +263,7 @@ export default function WorkshopPage() {
             <CardContent className="flex flex-col flex-grow">
               <StatusBadge status={w.dynamicStatus} />
 
-              <h3 className="font-semibold text-sm line-clamp-2">
-                {w.name}
-              </h3>
+              <h3 className="font-semibold text-sm line-clamp-2">{w.name}</h3>
 
               {w.dynamicStatus === 'Upcoming' && (
                 <CountdownTimer
@@ -298,10 +297,11 @@ export default function WorkshopPage() {
                     setSelectedWebinar(w)
                     setDialogOpen(true)
                   }}
-                  className={`w-full ${w.registrationType === 'free'
+                  className={`w-full ${
+                    w.registrationType === 'free'
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-orange-500 hover:bg-orange-600'
-                    }`}
+                  }`}
                 >
                   {w.registrationType === 'free'
                     ? 'Register Free'
@@ -309,7 +309,6 @@ export default function WorkshopPage() {
                 </Button>
               )}
             </CardFooter>
-
           </Card>
         ))}
       </div>

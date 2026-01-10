@@ -2,9 +2,14 @@
 
 import { JSX, useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Image from 'next/image'
 import DOMPurify from 'dompurify'
-import { CalendarDays, Clock, CheckCircle, Lock, MessageSquarePlus } from 'lucide-react'
+import {
+  CalendarDays,
+  Clock,
+  CheckCircle,
+  Lock,
+  MessageSquarePlus,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import Overview from '@/components/Overview'
@@ -12,7 +17,8 @@ import Faculty from '@/components/Faculty'
 import FAQ from '@/components/FAQ'
 import Feedback from '@/components/Feedback'
 import QuizTab from '@/components/QuizTab'
-import Meeting from '@/components/Meeting'
+import AskQuestion from '@/components/AskQuestion'
+import SponsorCard from '@/components/SponsorCard'
 
 import { apiRequest } from '@/lib/apiRequest'
 import { useAuthStore } from '@/stores/authStore'
@@ -20,12 +26,10 @@ import { useAuthStore } from '@/stores/authStore'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import WebinarSkeleton from '@/components/WebinarSkeleton'
-import AskQuestion from '@/components/AskQuestion'
-import SponsorCard from '@/components/SponsorCard'
 
 /* ================= TYPES ================= */
 
-type TabType = 'overview' | 'faculty' | 'faq' | 'feedback' | 'quiz' | 'meeting' | 'question'
+type TabType = 'overview' | 'faculty' | 'faq' | 'feedback' | 'quiz' | 'question'
 
 interface WebinarApi {
   _id: string
@@ -35,7 +39,6 @@ interface WebinarApi {
   endDate: string
   startTime: string
   endTime: string
-  dynamicStatus: string
   description: string
 }
 
@@ -47,9 +50,14 @@ type Comment = {
   date?: string
 }
 
+type MeetingData = {
+  meetingName: string
+  meetingLink: string
+}
+
 /* ================= PAGE ================= */
 
-export default function WebinarDetailPage() {
+export default function WorkshopDetailPage() {
   const router = useRouter()
   const { id: webinarId } = useParams<{ id: string }>()
   const user = useAuthStore((s) => s.user)
@@ -71,6 +79,8 @@ export default function WebinarDetailPage() {
     meeting: boolean
     question: boolean
   } | null>(null)
+
+  const [meeting, setMeeting] = useState<MeetingData | null>(null)
 
   /* ================= FETCH WEBINAR + ACCESS ================= */
 
@@ -141,6 +151,27 @@ export default function WebinarDetailPage() {
     fetchSettings()
   }, [webinarId, hasAccess])
 
+  /* ================= FETCH MEETING ================= */
+
+  useEffect(() => {
+    if (!webinarId || !settings?.meeting) return
+
+    const fetchMeeting = async () => {
+      try {
+        const res = await apiRequest({
+          endpoint: `/api/meetings/${webinarId}`,
+          method: 'GET',
+        })
+
+        setMeeting(res?.data ?? null)
+      } catch {
+        setMeeting(null)
+      }
+    }
+
+    fetchMeeting()
+  }, [webinarId, settings?.meeting])
+
   /* ================= COMMENTS ================= */
 
   useEffect(() => {
@@ -196,18 +227,18 @@ export default function WebinarDetailPage() {
     }
   }
 
-  /* ================= AVAILABLE TABS (MEMOIZED) ================= */
+  /* ================= AVAILABLE TABS (FIXED) ================= */
 
   const availableTabs = useMemo<TabType[]>(() => {
-    return [
-      'overview',
-      ...(settings?.faculty ? (['faculty'] as TabType[]) : []),
-      ...(settings?.faq ? (['faq'] as TabType[]) : []),
-      ...(settings?.feedback ? (['feedback'] as TabType[]) : []),
-      ...(settings?.quiz ? (['quiz'] as TabType[]) : []),
-      ...(settings?.meeting ? (['meeting'] as TabType[]) : []),
-      ...(settings?.question ? (['question'] as TabType[]) : []),
-    ]
+    const tabs: TabType[] = ['overview']
+
+    if (settings?.faculty) tabs.push('faculty')
+    if (settings?.faq) tabs.push('faq')
+    if (settings?.feedback) tabs.push('feedback')
+    if (settings?.quiz) tabs.push('quiz')
+    if (settings?.question) tabs.push('question')
+
+    return tabs
   }, [settings])
 
   /* ================= TAB SAFETY ================= */
@@ -218,10 +249,10 @@ export default function WebinarDetailPage() {
     }
   }, [availableTabs, tab])
 
-  /* ================= TAB PANELS (MEMOIZED) ================= */
+  /* ================= TAB PANELS ================= */
 
-  const tabPanels = useMemo(() => {
-    if (!webinar) return null
+  const tabPanels = useMemo<Record<TabType, JSX.Element>>(() => {
+    if (!webinar) return {} as any
 
     return {
       overview: (
@@ -238,9 +269,8 @@ export default function WebinarDetailPage() {
       faq: <FAQ webinarId={webinarId} />,
       feedback: <Feedback webinarId={webinarId} />,
       quiz: <QuizTab webinarId={webinarId} webinarTitle={webinar.name} />,
-      meeting: <Meeting webinarId={webinarId} />,
       question: <AskQuestion webinarId={webinarId} />,
-    } as Record<TabType, JSX.Element>
+    }
   }, [webinar, comments, commentText, posting, webinarId])
 
   /* ================= STATES ================= */
@@ -252,9 +282,6 @@ export default function WebinarDetailPage() {
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center">
         <Lock size={48} className="text-red-500" />
         <h2 className="text-xl font-semibold">Access Denied</h2>
-        <p className="text-sm text-gray-600">
-          You are not registered for this workshop.
-        </p>
         <Button
           onClick={() => router.push('/workshop')}
           className="bg-orange-600 hover:bg-orange-700"
@@ -266,7 +293,7 @@ export default function WebinarDetailPage() {
   }
 
   if (!webinar) {
-    return <div className="p-8 text-center">Workshop not found</div>
+    return <div className="p-8 text-center">Webinar not found</div>
   }
 
   /* ================= UI ================= */
@@ -283,7 +310,6 @@ export default function WebinarDetailPage() {
         </button>{' '}
         / <span className="text-gray-600">{webinar.name}</span>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         {/* LEFT */}
         <div className="space-y-6 min-w-0">
@@ -307,81 +333,84 @@ export default function WebinarDetailPage() {
             <CardHeader>
               <h1 className="text-xl font-semibold">{webinar.name}</h1>
             </CardHeader>
+
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
                 <CalendarDays size={14} />
                 {webinar.startDate} – {webinar.endDate}
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock size={14} />
-                  {webinar.startTime} – {webinar.endTime}
-                </div>
-
-                <div className="flex items-center gap-2 text-green-600 font-medium">
-                  <span className="w-2 h-2 bg-green-500 rounded-full" />
-                  {webinar.dynamicStatus}
-                </div>
+              <div className="flex items-center gap-2">
+                <Clock size={14} />
+                {webinar.startTime} – {webinar.endTime}
               </div>
 
-              <Button disabled className="w-full">
-                <CheckCircle size={16} />
-                Registered
-              </Button>
+              {/* JOIN MEETING */}
+              {settings?.meeting && meeting && (
+                <Button
+                  asChild
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  <a
+                    href={meeting.meetingLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Join Meeting
+                  </a>
+                </Button>
+              )}
+
+              {hasAccess && (
+                <Button disabled className="w-full flex items-center gap-2">
+                  <CheckCircle size={16} />
+                  Registered
+                </Button>
+              )}
             </CardContent>
           </Card>
 
           {/* TABS */}
           <Card>
             <CardContent className="p-4">
-              <div className="flex gap-3 border-b pb-3 font-bold overflow-x-auto whitespace-nowrap no-scrollbar">
-                {availableTabs.map((t) => {
-                  const isActive = tab === t
-
-                  // 🔹 Special UI for Question tab
-                  if (t === 'question') {
-                    return (
-                      <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        className={`shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium transition
-          ${isActive
-                            ? 'bg-orange-600 hover:bg-orange-700 text-white border-orange-100'
-                            : 'bg-white text-orange-600 border-orange-600 hover:bg-orange-50'
-                          }
-        `}
-                      >
-                        <MessageSquarePlus size={16} />
-                        Ask Question
-                      </button>
-                    )
-                  }
-
-                  // 🔹 Normal tabs
-                  return (
+              <div className="flex gap-3 border-b pb-3 overflow-x-auto whitespace-nowrap no-scrollbar">
+                {availableTabs.map((t) =>
+                  t === 'question' ? (
                     <button
                       key={t}
                       onClick={() => setTab(t)}
-                      className={`shrink-0 capitalize px-3 py-1.5 rounded-md ${isActive
+                      className={`shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium transition ${
+                        tab === t
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-white text-orange-600 border-orange-600'
+                      }`}
+                    >
+                      <MessageSquarePlus size={16} />
+                      Ask Question
+                    </button>
+                  ) : (
+                    <button
+                      key={t}
+                      onClick={() => setTab(t)}
+                      className={`shrink-0 capitalize px-3 py-1.5 rounded-md ${
+                        tab === t
                           ? 'bg-[#E8F3FF] text-orange-600 font-bold'
                           : 'text-gray-600 hover:bg-gray-50 font-medium'
-                        }`}
+                      }`}
                     >
                       {t}
                     </button>
                   )
-                })}
-
+                )}
               </div>
 
-              <div className="mt-6">{tabPanels?.[tab]}</div>
+              <div className="mt-6">{tabPanels[tab]}</div>
             </CardContent>
           </Card>
         </div>
 
         {/* RIGHT */}
-       <SponsorCard/>
+        <SponsorCard />
       </div>
     </div>
   )

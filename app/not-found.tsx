@@ -31,8 +31,8 @@ export default function NotFoundPage() {
       </p>
 
       {/* Back Button */}
-      <Link href="/dashboard">
-        <Button variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">← Back To Dashbaord</Button>
+      <Link href="/mylearning">
+        <Button variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">← Back To My Learning</Button>
       </Link>
     </motion.div>
   )
