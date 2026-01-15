@@ -223,7 +223,7 @@ export default function ConferenceList() {
                 src={c.image}
                 alt={c.name}
                 fill
-                className="object-cover group-hover:scale-110 transition"
+                className="object-fit group-hover:scale-110 transition"
               />
             </div>
 

@@ -27,7 +27,7 @@ export default function SessionCard({ session, topics, view, index }: Props) {
 
   return (
     <div
-      className={`rounded-lg border overflow-hidden ${
+      className={`rounded-lg  overflow-hidden ${
         SESSION_COLORS[index % 5]
       }`}
     >
@@ -65,7 +65,7 @@ export default function SessionCard({ session, topics, view, index }: Props) {
       >
         <div className="p-4 space-y-4 bg-white">
           {topics.map((t) => (
-            <div key={t._id} className="border rounded p-3 space-y-1">
+            <div key={t._id} className="bg-orange-100 rounded-lg p-3 space-y-1">
               <div className="flex justify-between">
                 <div>
                   <div className="text-sm text-muted-foreground">

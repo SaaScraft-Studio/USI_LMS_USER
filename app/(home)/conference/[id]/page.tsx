@@ -115,7 +115,7 @@ export default function ProgramSchedulePage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="p-4 space-y-4">
         {[1, 2, 3].map((i) => (
           <SessionCard.Skeleton key={i} />
         ))}
@@ -124,25 +124,35 @@ export default function ProgramSchedulePage({ params }: PageProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 space-y-6">
       {/* ===== HEADER ===== */}
       <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Session Details</h1>
+        <h1 className="text-2xl font-bold text-orange-700 hover:text-orange-800">Session Details</h1>
 
         <div className="flex justify-center gap-2">
           <Button
-            variant={view === 'list' ? 'default' : 'outline'}
             onClick={() => setView('list')}
+            className={
+              view === 'list'
+                ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }
           >
             List View
           </Button>
+
           <Button
-            variant={view === 'collapse' ? 'default' : 'outline'}
             onClick={() => setView('collapse')}
+            className={
+              view === 'collapse'
+                ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }
           >
             Collapsible View
           </Button>
         </div>
+
 
         <div className="max-w-xl mx-auto">
           <Input
@@ -153,41 +163,61 @@ export default function ProgramSchedulePage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* ===== STICKY HALL TABS ===== */}
-      <div className="sticky top-0 z-30 bg-background py-2">
+      {/* ===== STICKY DATE TABS ===== */}
+      <div className="bg-background">
         <div className="flex justify-center gap-2 flex-wrap">
-          {halls.map((hall, i) => (
-            <button
-              key={String(hall)}
-              onClick={() => setActiveHall(String(hall))}
-              className={`px-4 py-2 rounded text-white text-sm ${
-                activeHall === String(hall) ? 'ring-2 ring-black' : ''
-              }`}
-              style={{ backgroundColor: HALL_COLORS[i % 10] }}
-            >
-              {String(hall)}
-            </button>
-          ))}
+          {dates.map((date, i) => {
+            const isActive = activeDate === String(date)
+
+            return (
+              <button
+                key={String(date)}
+                onClick={() => setActiveDate(String(date))}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors
+            ${isActive
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                    : 'text-white'
+                  }
+          `}
+                style={{
+                  backgroundColor: isActive ? undefined : DATE_COLORS[i % 5],
+                }}
+              >
+                {String(date)}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* ===== STICKY DATE TABS ===== */}
-      <div className="sticky top-[56px] z-20 bg-background py-2">
+
+      {/* ===== STICKY HALL TABS ===== */}
+      <div className="bg-background">
         <div className="flex justify-center gap-2 flex-wrap">
-          {dates.map((date, i) => (
-            <button
-              key={String(date)}
-              onClick={() => setActiveDate(String(date))}
-              className={`px-4 py-2 rounded text-white text-sm ${
-                activeDate === date ? 'ring-2 ring-black' : ''
-              }`}
-              style={{ backgroundColor: DATE_COLORS[i % 5] }}
-            >
-              {String(date)}
-            </button>
-          ))}
+          {halls.map((hall, i) => {
+            const isActive = activeHall === String(hall)
+
+            return (
+              <button
+                key={String(hall)}
+                onClick={() => setActiveHall(String(hall))}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors
+            ${isActive
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                    : 'text-white'
+                  }
+          `}
+                style={{
+                  backgroundColor: isActive ? undefined : HALL_COLORS[i % 10],
+                }}
+              >
+                {String(hall)}
+              </button>
+            )
+          })}
         </div>
       </div>
+
 
       {/* ===== CONTENT ===== */}
       {grouped.map((group, i) => (

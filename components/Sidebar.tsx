@@ -48,7 +48,7 @@ const sidebarItems = [
     icon: <Wrench size={20} />,
   },
   {
-    name: 'Live Conference',
+    name: 'Conference',
     href: '/conference',
     icon: <Users size={20} />,
   },
