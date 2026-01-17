@@ -1,42 +1,47 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronDown, Video } from 'lucide-react'
+import { HALL_LIGHT_COLORS } from '@/app/(home)/conference/[id]/page'
 
-const SESSION_COLORS = [
-  'bg-slate-50',
-  'bg-zinc-50',
-  'bg-neutral-50',
-  'bg-stone-50',
-  'bg-gray-50',
-]
 
 type Props = {
+  conferenceId: string
   session: any
   topics: any[]
   view: 'list' | 'collapse'
-  index: number
+  hallIndex: number
 }
 
-export default function SessionCard({ session, topics, view, index }: Props) {
+export default function SessionCard({
+  conferenceId,
+  session,
+  topics,
+  view,
+  hallIndex,
+}: Props) {
   const [open, setOpen] = useState(view === 'list')
 
   useEffect(() => {
     setOpen(view === 'list')
   }, [view])
 
+  const router = useRouter()
+
+  const handleNavigateToTopic = (topicId: string) => {
+    router.push(`/conference/${conferenceId}/topic/${topicId}`)
+  }
+
+
   return (
-    <div
-      className={`rounded-lg  overflow-hidden ${
-        SESSION_COLORS[index % 5]
-      }`}
-    >
-      {/* SESSION HEADER */}
+    <div className="rounded-lg overflow-hidden">
+      {/* ===== SESSION HEADER ===== */}
       <button
-        className="w-full flex justify-between items-center px-4 py-3 font-semibold"
+        className="w-full flex justify-between items-center px-4 py-3 font-bold bg-gray-100"
         onClick={() => view === 'collapse' && setOpen((o) => !o)}
       >
-        <div className="text-left">
+        <div className="text-left font-bold text-green-800 hover:text-green-900">
           <div className="text-sm text-muted-foreground">
             {session.startTime} – {session.endTime}
           </div>
@@ -44,28 +49,25 @@ export default function SessionCard({ session, topics, view, index }: Props) {
         </div>
 
         {view === 'collapse' && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs bg-orange-600 text-white px-2 py-1 rounded">
-              {topics.length} Topics
-            </span>
-            <ChevronDown
-              className={`h-4 w-4 transition-transform duration-300 ${
-                open ? 'rotate-180' : ''
+          <ChevronDown
+            className={`h-4 w-4 transition-transform duration-300 ${open ? 'rotate-180' : ''
               }`}
-            />
-          </div>
+          />
         )}
       </button>
 
-      {/* TOPICS */}
+      {/* ===== TOPICS ===== */}
       <div
-        className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          open ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
+        className={`transition-all duration-300 overflow-hidden ${open ? 'max-h-[2000px]' : 'max-h-0'
+          }`}
       >
-        <div className="p-4 space-y-4 bg-white">
+        <div className="p-4 space-y-3 bg-white">
           {topics.map((t) => (
-            <div key={t._id} className="bg-orange-100 rounded-lg p-3 space-y-1">
+            <div
+              key={t._id}
+              className={`rounded-lg p-3  ${HALL_LIGHT_COLORS[hallIndex % 10]
+                }`}
+            >
               <div className="flex justify-between">
                 <div>
                   <div className="text-sm text-muted-foreground">
@@ -75,49 +77,94 @@ export default function SessionCard({ session, topics, view, index }: Props) {
                 </div>
 
                 {t.videoLink && (
-                  <a
-                    href={t.videoLink}
-                    target="_blank"
-                    className="flex items-center gap-1 text-sm text-orange-600"
+                  <button
+                    onClick={() => handleNavigateToTopic(t._id)}
+                    className="flex items-center gap-1 text-sm text-orange-600 hover:underline"
                   >
                     <Video className="h-4 w-4" />
                     Watch Video
-                  </a>
+                  </button>
                 )}
+
               </div>
 
-              {(t.topicType === 'Presentation' || t.topicType === 'Debate') && (
-                <p className="text-sm">
-                  <b>Speaker:</b>{' '}
-                  {t.speakerId
-                    .map((s: any) => `${s.prefix} ${s.speakerName}`)
-                    .join(', ')}
-                </p>
-              )}
+              {/* ===== ROLES ===== */}
+              {(t.topicType === 'Presentation' ||
+                t.topicType === 'Debate') && (
+                  <p className="text-sm mt-1">
+                    <b>Speaker:</b>{' '}
+                    {t.speakerId
+                      .map(
+                        (s: any) =>
+                          `${s.prefix} ${s.speakerName}`
+                      )
+                      .join(', ')}
+                  </p>
+                )}
 
               {t.topicType === 'Panel Discussion' && (
                 <>
-                  <p className="text-sm">
-                    <b>Moderator:</b> {t.moderator}
+                  <p className="text-sm mt-1">
+                    <b>Moderator:</b>{' '}
+                    {t.moderator?.prefix}{' '}
+                    {t.moderator?.speakerName}
                   </p>
                   <p className="text-sm">
-                    <b>Panelists:</b> {t.panelist.join(', ')}
+                    <b>Panelists:</b>{' '}
+                    {t.panelist
+                      .map(
+                        (p: any) =>
+                          `${p.prefix} ${p.speakerName}`
+                      )
+                      .join(', ')}
                   </p>
                 </>
               )}
 
               {t.topicType === 'Quiz' && (
                 <>
-                  <p className="text-sm">
-                    <b>Quiz Master:</b> {t.quizMaster}
+                  <p className="text-sm mt-1">
+                    <b>Quiz Master:</b>{' '}
+                    {t.quizMaster?.prefix}{' '}
+                    {t.quizMaster?.speakerName}
                   </p>
                   <p className="text-sm">
-                    <b>Team:</b> {t.teamMember.join(', ')}
+                    <b>Team:</b>{' '}
+                    {t.teamMember
+                      .map(
+                        (m: any) =>
+                          `${m.prefix} ${m.speakerName}`
+                      )
+                      .join(', ')}
                   </p>
                 </>
               )}
             </div>
           ))}
+
+          {/* ===== CHAIRPERSONS (SESSION LEVEL) ===== */}
+          {session.chairperson?.length > 0 && (
+            <div
+              className={`pt-3 px-3 pb-3 rounded-lg
+      ${HALL_LIGHT_COLORS[hallIndex % 10]}`}
+            >
+              <p className="text-sm font-bold mb-2 text-orange-600">
+                Chairpersons:
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {session.chairperson.map((c: any) => (
+                  <span
+                    key={c._id}
+                    className="px-3 py-1 font-semibold rounded-full text-sm bg-white/70 text-gray-800"
+                  >
+                    {c.prefix} {c.speakerName}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

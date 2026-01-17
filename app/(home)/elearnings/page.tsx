@@ -34,7 +34,7 @@ type SortOrder = 'newest' | 'oldest'
 interface Course {
   _id: string
   courseName: string
-  courseImage: string
+  image: string
   startDate: string
   endDate: string
   startTime: string
@@ -223,7 +223,7 @@ export default function CourseList() {
           >
             <div className="relative h-[250px] w-full overflow-hidden">
               <Image
-                src={c.courseImage}
+                src={c.image || '/avatar.png'}
                 alt={c.courseName}
                 fill
                 className="object-fit transition-transform duration-500 group-hover:scale-110"

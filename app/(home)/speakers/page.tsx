@@ -1,22 +1,20 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Search } from 'lucide-react'
 import SpeakerCard from '@/components/SpeakerCard'
 import SpeakerSkeleton from '@/components/SpeakerSkeleton'
 import { apiRequest } from '@/lib/apiRequest'
+import getPaginationPages from '@/utils/getPaginationPages'
 
 type Speaker = {
   id: string
   name: string
   photo: string
   institute: string
-  specialization: string
   location: string
   videos: number
 }
-
 
 const PAGE_SIZE = 9
 
@@ -29,71 +27,44 @@ export default function SpeakersPage() {
   /* ================= FETCH ================= */
 
   useEffect(() => {
-  const fetchSpeakers = async () => {
-    try {
-      setIsFetching(true)
+    const fetchSpeakers = async () => {
+      try {
+        setIsFetching(true)
 
-      const res = await apiRequest<null, any>({
-        endpoint: '/api/assign-speakers',
-        method: 'GET',
-      })
+        const res = await apiRequest<null, any>({
+          endpoint: '/api/speakers/global-stats',
+          method: 'GET',
+        })
 
-      /**
-       * Map speakerId -> speaker data + unique webinarIds
-       */
-      const map = new Map<
-        string,
-        Speaker & { webinarSet: Set<string> }
-      >()
+        const mapped: Speaker[] = res.data.map((item: any) => {
+          const s = item.speaker
 
-      res.data.forEach((item: any) => {
-        const s = item.speakerId
-        const webinarId = item.webinarId?._id
-
-        if (!map.has(s._id)) {
-          map.set(s._id, {
+          return {
             id: s._id,
             name: `${s.prefix} ${s.speakerName}`,
-            photo: s.speakerProfilePicture || '/avatar.png',
+            photo: s.speakerProfilePicture || '/speakers.png',
             institute: s.affiliation || '—',
-            specialization: s.specialization || '—',
-            location: [s.city, s.state, s.country]
-              .filter(Boolean)
-              .join(', '),
-            videos: 0,
-            webinarSet: new Set<string>(),
-          })
-        }
-
-        // ✅ Count unique webinars per speaker
-        if (webinarId) {
-          map.get(s._id)!.webinarSet.add(webinarId)
-        }
-      })
-
-      // Final transform: calculate videos count
-      const finalSpeakers: Speaker[] = Array.from(map.values()).map(
-        ({ webinarSet, ...rest }) => ({
-          ...rest,
-          videos: webinarSet.size,
+            location: [s.state, s.country].filter(Boolean).join(', '),
+            videos: item.totalVideos ?? 0,
+          }
         })
-      )
 
-      setSpeakers(finalSpeakers)
-    } finally {
-      setIsFetching(false)
+        setSpeakers(mapped)
+      } finally {
+        setIsFetching(false)
+      }
     }
-  }
 
-  fetchSpeakers()
-}, [])
-
+    fetchSpeakers()
+  }, [])
 
   /* ================= SEARCH ================= */
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return speakers.filter((s) => s.name.toLowerCase().includes(q))
+    return speakers.filter((s) =>
+      s.name.toLowerCase().includes(q)
+    )
   }, [search, speakers])
 
   /* ================= PAGINATION ================= */
@@ -141,33 +112,33 @@ export default function SpeakersPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 pt-6">
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={page === 1}
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          >
-            <ChevronLeft size={18} />
-          </Button>
-
-          <span className="text-sm font-medium">
-            Page {page} of {totalPages}
-          </span>
-
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-          >
-            <ChevronRight size={18} />
-          </Button>
+        <div className="flex justify-center gap-2 pt-6">
+          {getPaginationPages(page, totalPages).map((p, i) =>
+            p === 'dots' ? (
+              <span key={i} className="px-3 py-1 text-gray-500">
+                …
+              </span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`px-3 py-1 rounded-md text-sm ${
+                  p === page
+                    ? 'bg-orange-600 text-white'
+                    : 'border hover:bg-gray-100'
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
         </div>
       )}
 
       {filtered.length === 0 && (
-        <p className="text-center text-gray-500 mt-10">No speakers found.</p>
+        <p className="text-center text-gray-500 mt-10">
+          No speakers found.
+        </p>
       )}
     </div>
   )

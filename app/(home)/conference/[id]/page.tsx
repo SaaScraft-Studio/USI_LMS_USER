@@ -11,20 +11,37 @@ type PageProps = {
   params: Promise<{ id: string }>
 }
 
-const HALL_COLORS = [
-  '#000000',
-  '#f97316',
-  '#16a34a',
-  '#7c3aed',
-  '#a16207',
-  '#dc2626',
-  '#2563eb',
-  '#0f766e',
-  '#9333ea',
-  '#475569',
+const DATE_COLORS = ['#9f1239', '#86198f', '#86198f', '#065f46', '#155e75']
+
+/** Dark hall colors (tabs + headers) */
+export const HALL_COLORS = [
+  'bg-green-800',
+  'bg-gray-800',
+  'bg-red-800',
+  'bg-blue-800',
+  'bg-purple-800',
+  'bg-amber-800',
+  'bg-rose-800',
+  'bg-violet-800',
+  'bg-emerald-800',
+  'bg-sky-800',
 ]
 
-const DATE_COLORS = ['#ec4899', '#8b5cf6', '#ef4444', '#22c55e', '#0ea5e9']
+/** Light versions for topics */
+export const HALL_LIGHT_COLORS = [
+  'bg-green-100',
+  'bg-gray-100',
+  'bg-red-100',
+  'bg-blue-100',
+  'bg-purple-100',
+  'bg-amber-100',
+  'bg-rose-100',
+  'bg-violet-100',
+  'bg-emerald-100',
+  'bg-sky-100',
+]
+
+
 
 export default function ProgramSchedulePage({ params }: PageProps) {
   const { id: conferenceId } = use(params)
@@ -41,14 +58,14 @@ export default function ProgramSchedulePage({ params }: PageProps) {
   const [activeHall, setActiveHall] = useState<string | null>(null)
   const [activeDate, setActiveDate] = useState<string | null>(null)
 
-  /* ================= EXTRACT TABS ================= */
+  /* ================= TABS ================= */
 
   const halls = useMemo(() => {
     if (!data?.data) return []
     return Array.from(
       new Set(
         data.data.map(
-          (t: any) => t.sessionId.hallId?.hallName || t.sessionId.hallId
+          (t: any) => t.sessionId.hallId.hallName
         )
       )
     )
@@ -70,7 +87,7 @@ export default function ProgramSchedulePage({ params }: PageProps) {
 
     data.data.forEach((t: any) => {
       const date = t.sessionId.sessionDate
-      const hall = t.sessionId.hallId?.hallName || t.sessionId.hallId || 'Hall'
+      const hall = t.sessionId.hallId.hallName
 
       if (activeHall && hall !== activeHall) return
       if (activeDate && date !== activeDate) return
@@ -79,10 +96,8 @@ export default function ProgramSchedulePage({ params }: PageProps) {
         ${t.title}
         ${t.sessionId.sessionName}
         ${t.speakerId?.map((s: any) => s.speakerName).join(' ')}
-        ${t.moderator}
-        ${t.quizMaster}
-        ${t.panelist?.join(' ')}
-        ${t.teamMember?.join(' ')}
+        ${t.panelist?.map((p: any) => p.speakerName).join(' ')}
+        ${t.teamMember?.map((m: any) => m.speakerName).join(' ')}
       `.toLowerCase()
 
       if (search && !searchable.includes(search.toLowerCase())) return
@@ -93,6 +108,7 @@ export default function ProgramSchedulePage({ params }: PageProps) {
         map.set(key, {
           date,
           hall,
+          hallIndex: halls.indexOf(hall),
           sessions: new Map(),
         })
       }
@@ -111,11 +127,11 @@ export default function ProgramSchedulePage({ params }: PageProps) {
     })
 
     return Array.from(map.values())
-  }, [data, search, activeHall, activeDate])
+  }, [data, search, activeHall, activeDate, halls])
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-6 space-y-4">
         {[1, 2, 3].map((i) => (
           <SessionCard.Skeleton key={i} />
         ))}
@@ -124,39 +140,29 @@ export default function ProgramSchedulePage({ params }: PageProps) {
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-6 space-y-6">
       {/* ===== HEADER ===== */}
       <div className="text-center space-y-4">
-        <h1 className="text-2xl font-bold text-orange-700 hover:text-orange-800">Session Details</h1>
+        <h1 className="text-3xl font-bold">Session Details</h1>
 
         <div className="flex justify-center gap-2">
           <Button
+            variant={view === 'list' ? 'default' : 'outline'}
             onClick={() => setView('list')}
-            className={
-              view === 'list'
-                ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-            }
           >
             List View
           </Button>
-
           <Button
+            variant={view === 'collapse' ? 'default' : 'outline'}
             onClick={() => setView('collapse')}
-            className={
-              view === 'collapse'
-                ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-            }
           >
             Collapsible View
           </Button>
         </div>
 
-
         <div className="max-w-xl mx-auto">
           <Input
-            placeholder="Search sessions and topics..."
+            placeholder="Search sessions & topics..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -190,31 +196,20 @@ export default function ProgramSchedulePage({ params }: PageProps) {
         </div>
       </div>
 
-
       {/* ===== STICKY HALL TABS ===== */}
-      <div className="bg-background">
+      <div className="sticky top-0 z-30 bg-background py-2">
         <div className="flex justify-center gap-2 flex-wrap">
-          {halls.map((hall, i) => {
-            const isActive = activeHall === String(hall)
-
-            return (
-              <button
-                key={String(hall)}
-                onClick={() => setActiveHall(String(hall))}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors
-            ${isActive
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                    : 'text-white'
-                  }
-          `}
-                style={{
-                  backgroundColor: isActive ? undefined : HALL_COLORS[i % 10],
-                }}
-              >
-                {String(hall)}
-              </button>
-            )
-          })}
+          {halls.map((hall, i) => (
+            <button
+              key={String(hall)}
+              onClick={() => setActiveHall(String(hall))}
+              className={`px-4 py-2 rounded-lg text-white text-sm ${
+                HALL_COLORS[i % 10]
+              } ${activeHall === hall ? 'ring-2 ring-gray' : ''}`}
+            >
+              {String(hall)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -223,22 +218,26 @@ export default function ProgramSchedulePage({ params }: PageProps) {
       {grouped.map((group, i) => (
         <div key={i} className="space-y-0">
           <div
-            className="text-white text-center py-3 rounded-t-lg"
-            style={{ backgroundColor: DATE_COLORS[i % 5] }}
+            className={`text-white text-center py-3 rounded-t-lg ${
+              HALL_COLORS[group.hallIndex % 10]
+            }`}
           >
             {group.date} – {group.hall}
           </div>
 
           <div className="border border-t-0 rounded-b-lg p-4 space-y-4 bg-white">
-            {Array.from(group.sessions.values()).map((s: any, idx: number) => (
-              <SessionCard
-                key={s.session._id}
-                session={s.session}
-                topics={s.topics}
-                view={view}
-                index={idx}
-              />
-            ))}
+            {Array.from(group.sessions.values()).map(
+              (s: any, idx: number) => (
+                <SessionCard
+                  key={s.session._id}
+                  conferenceId={conferenceId}
+                  session={s.session}
+                  topics={s.topics}
+                  view={view}
+                  hallIndex={group.hallIndex}
+                />
+              )
+            )}
           </div>
         </div>
       ))}

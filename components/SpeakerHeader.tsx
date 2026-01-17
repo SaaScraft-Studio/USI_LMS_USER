@@ -1,15 +1,16 @@
 'use client'
 
-import { MapPin, BadgeCheck, University} from 'lucide-react'
+import Image from 'next/image'
+import { MapPin, BadgeCheck, University } from 'lucide-react'
 
 export type Speaker = {
-  id: string
+  id?: string
   name: string
   qualification: string
-  institute: string
+  institute?: string
   location: string
-  photo: string
-  videos: number
+  photo?: string
+  videos?: number
 }
 
 export default function SpeakerHeader({ speaker }: { speaker: Speaker }) {
@@ -24,43 +25,43 @@ export default function SpeakerHeader({ speaker }: { speaker: Speaker }) {
           hover:shadow-xl
         "
       >
-        {/* Avatar */}
+        {/* ================= AVATAR ================= */}
         <div className="flex justify-center">
-          <div className="relative">
-            <div className="h-28 w-28 overflow-hidden rounded-full border-4 border-white shadow-sm">
-              <img
-                src={speaker.photo}
-                alt={speaker.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
+          <div className="relative h-28 w-28 rounded-full overflow-hidden border-4 border-white shadow-sm bg-gray-100">
+            <Image
+              src={speaker.photo || '/avatar.png'}
+              alt={speaker.name}
+              fill
+              sizes="112px"
+              className="object-cover"
+              priority
+            />
           </div>
         </div>
 
-        {/* Name + Verified */}
+        {/* ================= NAME ================= */}
         <div className="mt-4 flex items-center justify-center gap-2">
-          <h1 className="text-lg font-semibold text-[#1F5C9E]">
+          <h1 className="text-lg font-semibold text-[#1F5C9E] text-center">
             {speaker.name}
           </h1>
-          <BadgeCheck className="h-4 w-4 text-blue-600" />
+          <BadgeCheck className="h-4 w-4 text-blue-600 shrink-0" />
         </div>
 
-        {/* Qualification */}
-        <div className="mt-4 space-y-3 text-sm text-gray-700">
-        <div className="flex items-center justify-center gap-2">
-          <University className="h-4 w-4 text-[#1F5C9E]" />
-          <span>{speaker.qualification}</span>
+        {/* ================= QUALIFICATION ================= */}
+        {speaker.qualification && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-700">
+            <University className="h-4 w-4 text-[#1F5C9E]" />
+            <span className="text-center">{speaker.qualification}</span>
           </div>
-          </div>
-        
+        )}
 
-        {/* Details */}
-        <div className="mt-4 space-y-3 text-sm text-gray-700">
-          <div className="flex items-center justify-center gap-2">
+        {/* ================= LOCATION ================= */}
+        {speaker.location && (
+          <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-700">
             <MapPin className="h-4 w-4 text-[#1F5C9E]" />
-            <span>{speaker.location}</span>
+            <span className="text-center">{speaker.location}</span>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

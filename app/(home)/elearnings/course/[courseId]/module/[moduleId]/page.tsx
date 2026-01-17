@@ -3,8 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
+import DOMPurify from 'dompurify'
 import { useAuthStore } from '@/stores/authStore'
 import { Download, ExternalLink } from 'lucide-react'
+import SponsorCard from '@/components/SponsorCard'
+import getPaginationPages from '@/utils/getPaginationPages'
+
+/* ================= CONSTANTS ================= */
+
+const COMMENTS_LIMIT = 50
 
 /* ================= TYPES ================= */
 
@@ -15,7 +22,7 @@ type Module = {
   contentType: 'video' | 'document' | 'image'
   contentUrl: string
   videoDuration?: string
-  additionalQuestions?: string[]
+  description: string
   additionalResources?: string[]
   weekCategoryId: {
     _id: string
@@ -50,9 +57,13 @@ export default function ModuleLecturePage() {
 
   const [module, setModule] = useState<Module | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
+  const [totalComments, setTotalComments] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [commentText, setCommentText] = useState('')
   const [posting, setPosting] = useState(false)
+
+  const totalPages = Math.ceil(totalComments / COMMENTS_LIMIT)
 
   /* ================= FETCH MODULE ================= */
 
@@ -81,21 +92,23 @@ export default function ModuleLecturePage() {
 
   /* ================= FETCH COMMENTS ================= */
 
-  const fetchComments = async () => {
+  const fetchComments = async (pageNo = 1) => {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/courses/${courseId}/modules/${moduleId}/comments`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/courses/${courseId}/modules/${moduleId}/comments?page=${pageNo}&limit=${COMMENTS_LIMIT}`,
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       }
     )
+
     const json = await res.json()
+    setTotalComments(json.total || 0)
     setComments(json.data || [])
   }
 
   useEffect(() => {
-    if (module) fetchComments()
+    if (module) fetchComments(1)
   }, [module])
 
   /* ================= POST COMMENT ================= */
@@ -123,7 +136,8 @@ export default function ModuleLecturePage() {
     )
 
     setCommentText('')
-    await fetchComments()
+    setPage(1)
+    await fetchComments(1)
     setPosting(false)
   }
 
@@ -134,7 +148,6 @@ export default function ModuleLecturePage() {
       <div className="max-w-5xl mx-auto p-6 space-y-4 animate-pulse">
         <div className="h-4 w-1/4 bg-gray-200 rounded" />
         <div className="h-8 w-2/3 bg-gray-200 rounded" />
-        <div className="h-32 bg-gray-200 rounded-xl" />
         <div className="h-64 bg-gray-200 rounded-xl" />
       </div>
     )
@@ -146,143 +159,182 @@ export default function ModuleLecturePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Breadcrumb */}
-      <div className="px-6 py-4 text-sm flex gap-2">
-        <button onClick={() => router.back()} className="text-orange-600">
-          Courses
-        </button>
-        <span className="text-gray-400">›</span>
-        <span className="font-medium text-gray-700">
-          {module.courseId.courseName}
-        </span>
+      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+
+        {/* ================= MAIN CONTENT ================= */}
+        <div className="space-y-6">
+
+          {/* Breadcrumb */}
+          <div className="text-sm flex gap-2">
+            <button
+              onClick={() => router.back()}
+              className="text-orange-600 hover:underline"
+            >
+              Courses
+            </button>
+            <span className="text-gray-400">›</span>
+            <span className="font-medium text-gray-700">
+              {module.courseId.courseName}
+            </span>
+          </div>
+
+          {/* Header */}
+          <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-2">
+            <p className="text-sm text-gray-500">
+              {module.weekCategoryId.weekCategoryName}
+            </p>
+            <h1 className="text-2xl font-semibold">{module.topicName}</h1>
+            <p className="text-gray-600 text-sm">{module.aboutTopic}</p>
+          </div>
+
+          {/* Video */}
+          {module.contentType === 'video' && (
+            <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-4">
+              <div className="aspect-video rounded-xl overflow-hidden">
+                <iframe
+                  src={module.contentUrl}
+                  className="w-full h-full"
+                  allowFullScreen
+                />
+              </div>
+
+              {/* DESCRIPTION (NEW) */}
+              <div
+                className="prose max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(module.description),
+                }}
+              />
+
+              {/* Resources */}
+              {module.additionalResources?.length ? (
+                <div className="flex flex-wrap gap-3">
+                  {module.additionalResources.map((link, i) => (
+                    <a
+                      key={i}
+                      href={link}
+                      target="_blank"
+                      className="px-4 py-2 text-sm rounded-lg border bg-gray-50 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <ExternalLink size={14} /> Resource {i + 1}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* Document / Image */}
+          {module.contentType !== 'video' && (
+            <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-4">
+              <div
+                className="prose max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(module.description),
+                }}
+              />
+
+              <div className="flex flex-wrap gap-4">
+                <a
+                  href={module.contentUrl}
+                  download
+                  className="px-5 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm flex items-center gap-2"
+                >
+                  <Download size={16} /> Download
+                </a>
+
+                <a
+                  href={module.contentUrl}
+                  target="_blank"
+                  className="px-5 py-2 rounded-lg border text-sm flex items-center gap-2"
+                >
+                  <ExternalLink size={16} /> View
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* COMMENTS */}
+          <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-4">
+            <textarea
+              rows={4}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write your comment..."
+              className="w-full border rounded-lg p-3 text-sm"
+            />
+
+            <button
+              onClick={handlePostComment}
+              disabled={posting}
+              className="px-6 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm"
+            >
+              {posting ? 'Posting...' : 'Post Comment'}
+            </button>
+
+            {comments.map((c) => (
+              <div key={c._id} className="border rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  {c.userId.profilePicture && (
+                    <Image
+                      src={c.userId.profilePicture}
+                      alt={c.userId.name}
+                      width={32}
+                      height={32}
+                      className="rounded-full"
+                    />
+                  )}
+                  <div>
+                    <p className="font-medium text-sm">{c.userId.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(c.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-2 text-sm">{c.comment}</p>
+              </div>
+            ))}
+
+            {/* PAGINATION */}
+            {totalPages > 1 && (
+              <div className="flex justify-center gap-2 pt-4">
+                {getPaginationPages(page, totalPages).map((p, i) =>
+                  p === 'dots' ? (
+                    <span key={i} className="px-3 py-1 text-gray-400">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => {
+                        setPage(p)
+                        fetchComments(p)
+                      }}
+                      className={`px-3 py-1 rounded-md text-sm ${
+                        p === page
+                          ? 'bg-orange-600 text-white'
+                          : 'border hover:bg-gray-100'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ================= SPONSOR (DESKTOP) ================= */}
+        <div className="hidden lg:block sticky top-24 h-fit">
+          <SponsorCard />
+        </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
-        {/* ================= HEADER ================= */}
-        <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-2">
-          <p className="text-sm text-gray-500">
-            {module.weekCategoryId.weekCategoryName}
-          </p>
-          <h1 className="text-2xl font-semibold">{module.topicName}</h1>
-          <p className="text-gray-600 text-sm leading-relaxed">
-            {module.aboutTopic}
-          </p>
-        </div>
-
-        {/* ================= VIDEO ================= */}
-        {module.contentType === 'video' && (
-          <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-4">
-            <div className="aspect-video rounded-xl overflow-hidden">
-              <iframe
-                src={module.contentUrl}
-                className="w-full h-full"
-                allow="autoplay; fullscreen"
-                allowFullScreen
-              />
-            </div>
-
-            {/* Resources */}
-            {module.additionalResources?.length ? (
-              <div className="flex flex-wrap gap-3">
-                {module.additionalResources.map((link, i) => (
-                  <a
-                    key={i}
-                    href={link}
-                    target="_blank"
-                    className="px-4 py-2 text-sm rounded-lg border bg-gray-50 hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    <ExternalLink size={14} /> Resource {i + 1}
-                  </a>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {/* ================= VIEW / DOWNLOAD ================= */}
-        {module.contentType !== 'video' && (
-          <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-4">
-            <h2 className="font-semibold text-lg">View Content</h2>
-
-            <div className="flex flex-wrap gap-4">
-              <a
-                href={module.contentUrl}
-                download
-                className="px-5 py-2 rounded-lg bg-blue-600 text-white text-sm flex items-center gap-2"
-              >
-                <Download size={16} /> Download Content
-              </a>
-
-              <a
-                href={module.contentUrl}
-                target="_blank"
-                className="px-5 py-2 rounded-lg border text-sm flex items-center gap-2"
-              >
-                <ExternalLink size={16} /> View Content
-              </a>
-            </div>
-          </div>
-        )}
-
-        {/* ================= QUESTIONS ================= */}
-        {module.additionalQuestions?.length ? (
-          <div className="bg-white rounded-2xl border shadow-sm p-6">
-            <h2 className="font-semibold mb-3">Questions</h2>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-              {module.additionalQuestions.map((q, i) => (
-                <li key={i}>{q}</li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
-
-        {/* ================= COMMENT BOX ================= */}
-        <div className="bg-white rounded-2xl border shadow-sm p-6 space-y-4">
-          <textarea
-            rows={4}
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Write your comment..."
-            className="w-full border rounded-lg p-3 text-sm"
-          />
-
-          <button
-            onClick={handlePostComment}
-            disabled={posting}
-            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-sm disabled:opacity-50"
-          >
-            {posting ? 'Posting...' : 'Post Comment'}
-          </button>
-        </div>
-
-        {/* ================= COMMENTS LIST ================= */}
-        <div className="space-y-4">
-          {comments.map((c) => (
-            <div
-              key={c._id}
-              className="bg-white rounded-xl border p-4 space-y-1"
-            >
-              <div className="flex items-center gap-3">
-                {c.userId.profilePicture && (
-                  <Image
-                    src={c.userId.profilePicture}
-                    alt={c.userId.name}
-                    width={32}
-                    height={32}
-                    className="rounded-full"
-                  />
-                )}
-                <p className="font-medium text-sm">{c.userId.name}</p>
-              </div>
-              <p className="text-xs text-gray-500">
-                {new Date(c.createdAt).toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-700">{c.comment}</p>
-            </div>
-          ))}
-        </div>
+      {/* ================= SPONSOR (MOBILE / TABLET) ================= */}
+      <div className="lg:hidden px-4 pb-8">
+        <SponsorCard />
       </div>
     </div>
-    
   )
 }

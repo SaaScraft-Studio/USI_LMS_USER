@@ -38,7 +38,6 @@ import {
 /*                                   CONFIG                                   */
 /* -------------------------------------------------------------------------- */
 const OTP_EXPIRY = 120 // 2 min
-const STORAGE_KEY = 'login-otp-state'
 
 /* -------------------------------------------------------------------------- */
 /*                                   SCHEMA                                   */
@@ -78,6 +77,7 @@ export default function LoginForm() {
   const [userId, setUserId] = useState<string | null>(null)
   const [otpTimer, setOtpTimer] = useState(OTP_EXPIRY)
   const [sendingOtp, setSendingOtp] = useState(false)
+  const [verifyingOtp, setVerifyingOtp] = useState(false)
 
   /* ----------------------------- FORMS ----------------------------- */
   const loginForm = useForm<LoginValues>({
@@ -91,27 +91,14 @@ export default function LoginForm() {
   })
 
   /* -------------------------------------------------------------------------- */
-  /*                         LOCAL STORAGE RESTORE                              */
+  /*                          FORCE LOGIN ON LOAD                               */
   /* -------------------------------------------------------------------------- */
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return
-    const s = JSON.parse(raw)
-    setStep(s.step ?? 'LOGIN')
-    setUserId(s.userId ?? null)
-    setOtpTimer(s.otpTimer ?? OTP_EXPIRY)
+    setStep('LOGIN')
+    setUserId(null)
+    setOtpTimer(OTP_EXPIRY)
+    otpForm.reset()
   }, [])
-
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        step,
-        userId,
-        otpTimer,
-      })
-    )
-  }, [step, userId, otpTimer])
 
   /* -------------------------------------------------------------------------- */
   /*                                  TIMER                                    */
@@ -121,31 +108,6 @@ export default function LoginForm() {
     const i = setInterval(() => setOtpTimer((t) => t - 1), 1000)
     return () => clearInterval(i)
   }, [step, otpTimer])
-
-  /* -------------------------------------------------------------------------- */
-  /*                        AUTO-PASTE OTP (WEB OTP API)                        */
-  /* -------------------------------------------------------------------------- */
-  useEffect(() => {
-    if (step !== 'OTP') return
-    if (!('OTPCredential' in window)) return
-
-    const ac = new AbortController()
-
-    ;(navigator as any).credentials
-      .get({
-        otp: { transport: ['sms'] },
-        signal: ac.signal,
-      })
-      .then((otp: any) => {
-        if (otp?.code) {
-          otpForm.setValue('otp', otp.code, { shouldValidate: true })
-          handleVerifyOtp({ otp: otp.code })
-        }
-      })
-      .catch(() => {})
-
-    return () => ac.abort()
-  }, [step])
 
   /* -------------------------------------------------------------------------- */
   /*                              SEND OTP                                     */
@@ -177,20 +139,14 @@ export default function LoginForm() {
   }
 
   /* -------------------------------------------------------------------------- */
-  /*                              RESEND OTP                                   */
-  /* -------------------------------------------------------------------------- */
-  const handleResendOtp = async () => {
-    if (otpTimer > 0) return
-    await sendOtp()
-  }
-
-  /* -------------------------------------------------------------------------- */
   /*                              VERIFY OTP                                   */
   /* -------------------------------------------------------------------------- */
   const handleVerifyOtp = async (values: OtpValues) => {
     if (!userId) return
 
     try {
+      setVerifyingOtp(true)
+
       const res = await apiRequest<
         { userId: string; otp: string },
         { accessToken: string; user: any }
@@ -201,13 +157,14 @@ export default function LoginForm() {
       })
 
       setUser(res.user, res.accessToken)
-      localStorage.removeItem(STORAGE_KEY)
       toast.success('Login successful')
       router.push('/mylearning')
     } catch (e: any) {
       otpForm.setError('otp', {
         message: e.message || 'Invalid OTP',
       })
+    } finally {
+      setVerifyingOtp(false)
     }
   }
 
@@ -262,27 +219,16 @@ export default function LoginForm() {
             {step === 'OTP' && (
               <>
                 <Form {...otpForm}>
-                  <form className="space-y-4">
+                  <form
+                    onSubmit={otpForm.handleSubmit(handleVerifyOtp)}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={otpForm.control}
                       name="otp"
-                      render={() => (
-                        <div className="flex justify-center w-full overflow-x-hidden">
-                          <InputOTP
-                            maxLength={6}
-                            onChange={(v) => {
-                              const value = v.replace(/\D/g, '')
-                              otpForm.setValue('otp', value, {
-                                shouldValidate: true,
-                              })
-
-                              if (value.length === 6) {
-                                otpForm.trigger('otp').then((ok) => {
-                                  if (ok) handleVerifyOtp({ otp: value })
-                                })
-                              }
-                            }}
-                          >
+                      render={({ field }) => (
+                        <div className="flex justify-center w-full">
+                          <InputOTP maxLength={6} {...field}>
                             <InputOTPGroup>
                               {[0, 1, 2, 3, 4, 5].map((i) => (
                                 <InputOTPSlot key={i} index={i} />
@@ -293,6 +239,14 @@ export default function LoginForm() {
                       )}
                     />
                     <FormMessage />
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      disabled={verifyingOtp}
+                    >
+                      {verifyingOtp ? 'Logging in…' : 'Submit OTP & Login'}
+                    </Button>
                   </form>
                 </Form>
 
@@ -302,7 +256,7 @@ export default function LoginForm() {
                   ) : (
                     <button
                       type="button"
-                      onClick={handleResendOtp}
+                      onClick={sendOtp}
                       className="underline"
                     >
                       Resend OTP
