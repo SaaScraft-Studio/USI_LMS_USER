@@ -1,5 +1,29 @@
 'use client'
 
+import { useAuthStore } from '@/stores/authStore'
+
+let isRefreshing = false
+let refreshPromise: Promise<void> | null = null
+
+async function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = fetch('/api/users/refresh-token', {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Refresh failed')
+        }
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+
+  return refreshPromise
+}
+
 export async function fetchClient(
   url: string,
   options: RequestInit = {}
@@ -16,6 +40,46 @@ export async function fetchClient(
     headers,
     credentials: 'include',
   })
+
+  const isRefreshRequest = url.includes('/users/refresh-token')
+
+  // 🔐 Access token expired
+  if (response.status === 401 && !isRefreshRequest) {
+    try {
+      if (!isRefreshing) {
+        isRefreshing = true
+        await refreshAccessToken()
+        isRefreshing = false
+      } else {
+        await refreshPromise
+      }
+
+      // 🔁 retry original request ONCE
+      return fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include',
+      })
+    } catch {
+      isRefreshing = false
+
+      // 🚨 HARD LOGOUT (NO PAGE RELOAD LOOP)
+      const store = useAuthStore.getState()
+      await store.logout()
+
+      // single redirect
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login')
+      }
+
+      throw new Error('Session expired. Please login again.')
+    }
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.message || 'Request failed')
+  }
 
   return response
 }
