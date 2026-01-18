@@ -55,7 +55,7 @@ export default function QuizResult({ quizId }: { quizId: string }) {
     const fetchData = async () => {
       try {
         const resultRes = await apiRequest({
-          endpoint: `/api/quizzes/${quizId}/result`,
+          endpoint: `/quizzes/${quizId}/result`,
           method: 'GET',
         })
         setResultData(resultRes.data)

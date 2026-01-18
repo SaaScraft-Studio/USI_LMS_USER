@@ -124,7 +124,7 @@ export default function QuizRunner({
       
       // Submit to API
       await apiRequest({
-        endpoint: `/api/webinars/${webinarId}/quizzes/${quiz._id}/submit`,
+        endpoint: `/webinars/${webinarId}/quizzes/${quiz._id}/submit`,
         method: 'POST',
         body: {
           userId: user.id,

@@ -48,7 +48,7 @@ export default function ProgramSchedulePage({ params }: PageProps) {
 
   const { data, isLoading } = useSWR(
     conferenceId
-      ? `${process.env.NEXT_PUBLIC_API_URL}/api/conferences/${conferenceId}/topics`
+      ? `${process.env.NEXT_PUBLIC_API_URL}/conferences/${conferenceId}/topics`
       : null,
     fetcher
   )

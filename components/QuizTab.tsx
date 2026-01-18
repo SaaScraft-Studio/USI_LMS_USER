@@ -41,7 +41,7 @@ export default function QuizTab({
     const fetchQuizzes = async () => {
       try {
         const res = await apiRequest({
-          endpoint: `/api/webinars/${webinarId}/quizzes`,
+          endpoint: `/webinars/${webinarId}/quizzes`,
           method: 'GET',
         })
         setQuizzes(res.data || [])

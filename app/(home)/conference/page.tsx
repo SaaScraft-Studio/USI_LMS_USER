@@ -75,7 +75,7 @@ export default function ConferenceList() {
       try {
         setIsFetching(true)
         const res = await apiRequest<null, any>({
-          endpoint: '/api/conferences',
+          endpoint: '/conferences',
           method: 'GET',
         })
         setConferences(res.data || [])
@@ -97,7 +97,7 @@ export default function ConferenceList() {
     const fetchRegistrations = async () => {
       try {
         const res = await apiRequest<null, any>({
-          endpoint: `/api/conference/registrations/${user.id}`,
+          endpoint: `/conference/registrations/${user.id}`,
           method: 'GET',
         })
         setRegisteredIds(res.data.map((r: any) => r.conference._id))
@@ -153,7 +153,7 @@ export default function ConferenceList() {
       setSubmitting(true)
 
       await apiRequest({
-        endpoint: '/api/conference/register',
+        endpoint: '/conference/register',
         method: 'POST',
         body: {
           conferenceId: selectedConference._id,

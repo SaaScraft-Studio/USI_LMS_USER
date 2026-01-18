@@ -15,7 +15,7 @@ export function useEventMeeting(eventId?: string, enabled?: boolean) {
     const fetchMeeting = async () => {
       try {
         const res = await apiRequest({
-          endpoint: `/api/meetings/${eventId}`,
+          endpoint: `/meetings/${eventId}`,
           method: 'GET',
         })
         setMeeting(res?.data ?? null)

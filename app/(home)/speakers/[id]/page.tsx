@@ -56,7 +56,7 @@ export default function SpeakerDetailsPage() {
   if (!user?.id) return
 
   apiRequest({
-    endpoint: `/api/conference/registrations/${user.id}`,
+    endpoint: `/conference/registrations/${user.id}`,
     method: 'GET',
   }).then((res) => {
     setRegisteredConferenceIds(
@@ -67,7 +67,7 @@ export default function SpeakerDetailsPage() {
   })
 
   apiRequest({
-    endpoint: `/api/webinar/registrations/${user.id}`,
+    endpoint: `/webinar/registrations/${user.id}`,
     method: 'GET',
   }).then((res) => {
     setRegisteredWebinarIds(
@@ -83,7 +83,7 @@ export default function SpeakerDetailsPage() {
     const fetchData = async () => {
       try {
         const res = await apiRequest<null, any>({
-          endpoint: `/api/speakers/${id}/videos`,
+          endpoint: `/speakers/${id}/videos`,
           method: 'GET',
         })
 
@@ -133,7 +133,7 @@ export default function SpeakerDetailsPage() {
 
       if (registerType === 'conference') {
         await apiRequest({
-          endpoint: '/api/conference/register',
+          endpoint: '/conference/register',
           method: 'POST',
           body: {
             conferenceId: selectedItem._id,
@@ -149,7 +149,7 @@ export default function SpeakerDetailsPage() {
         )
       } else {
         await apiRequest({
-          endpoint: '/api/webinar/register',
+          endpoint: '/webinar/register',
           method: 'POST',
           body: {
             webinarId: selectedItem._id,

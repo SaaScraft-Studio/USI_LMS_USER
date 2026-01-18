@@ -15,7 +15,7 @@ export function useEventSettings(eventId?: string, enabled?: boolean) {
     const fetchSettings = async () => {
       try {
         const res = await apiRequest({
-          endpoint: `/api/webinars/${eventId}/settings`,
+          endpoint: `/webinars/${eventId}/settings`,
           method: 'GET',
         })
 

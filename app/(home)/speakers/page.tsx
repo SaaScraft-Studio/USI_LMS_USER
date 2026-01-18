@@ -35,7 +35,7 @@ export default function SpeakersPage() {
         setIsFetching(true)
 
         const res = await apiRequest<null, any>({
-          endpoint: '/api/speakers/global-stats',
+          endpoint: '/speakers/global-stats',
           method: 'GET',
         })
 

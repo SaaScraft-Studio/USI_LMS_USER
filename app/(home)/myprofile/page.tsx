@@ -70,7 +70,7 @@ export default function MyProfilePage() {
     const loadProfile = async () => {
       try {
         const profile = await apiRequest<null, any>({
-          endpoint: '/api/users/profile',
+          endpoint: '/users/profile',
           method: 'GET',
         })
 
@@ -123,7 +123,7 @@ export default function MyProfilePage() {
       if (photoFile) fd.append('profilePicture', photoFile)
 
       await apiRequest({
-        endpoint: '/api/users/profile',
+        endpoint: '/users/profile',
         method: 'PUT',
         body: fd,
       })

@@ -28,7 +28,7 @@ export default function Meeting({ webinarId }: { webinarId: string }) {
     const fetchMeeting = async () => {
       try {
         const res = await apiRequest({
-          endpoint: `/api/meetings/${webinarId}`,
+          endpoint: `/meetings/${webinarId}`,
           method: 'GET',
         })
 

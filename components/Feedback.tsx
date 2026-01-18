@@ -58,7 +58,7 @@ export default function Feedback({ webinarId }: { webinarId: string }) {
       try {
         /* 1️⃣ Check submitted feedback first */
         const submittedRes = await apiRequest<any>({
-          endpoint: `/api/webinars/${webinarId}/my-feedback`,
+          endpoint: `/webinars/${webinarId}/my-feedback`,
           method: 'GET',
         })
 
@@ -76,7 +76,7 @@ export default function Feedback({ webinarId }: { webinarId: string }) {
 
           /* Load feedback template for read-only view */
           const templateRes = await apiRequest<any>({
-            endpoint: `/api/webinars/${webinarId}/feedback`,
+            endpoint: `/webinars/${webinarId}/feedback`,
             method: 'GET',
           })
 
@@ -98,7 +98,7 @@ export default function Feedback({ webinarId }: { webinarId: string }) {
       /* 2️⃣ Load feedback template (first time users) */
       try {
         const res = await apiRequest<any>({
-          endpoint: `/api/webinars/${webinarId}/feedback`,
+          endpoint: `/webinars/${webinarId}/feedback`,
           method: 'GET',
         })
 
@@ -149,7 +149,7 @@ export default function Feedback({ webinarId }: { webinarId: string }) {
       setSubmitting(true)
 
       await apiRequest({
-        endpoint: `/api/webinars/${webinarId}/send-feedback`,
+        endpoint: `/webinars/${webinarId}/send-feedback`,
         method: 'POST',
         body: {
           userId: user.id,
@@ -166,7 +166,7 @@ export default function Feedback({ webinarId }: { webinarId: string }) {
 
       /* 🔐 Re-fetch server truth */
       const res = await apiRequest<any>({
-        endpoint: `/api/webinars/${webinarId}/my-feedback`,
+        endpoint: `/webinars/${webinarId}/my-feedback`,
         method: 'GET',
       })
 

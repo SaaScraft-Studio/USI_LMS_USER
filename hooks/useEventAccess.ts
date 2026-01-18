@@ -18,11 +18,11 @@ export function useEventAccess(eventId?: string, userId?: string) {
       try {
         const [eventRes, regRes] = await Promise.all([
           apiRequest({
-            endpoint: `/api/webinars/active/${eventId}`,
+            endpoint: `/webinars/active/${eventId}`,
             method: 'GET',
           }),
           apiRequest({
-            endpoint: `/api/webinar/registrations/${userId}`,
+            endpoint: `/webinar/registrations/${userId}`,
             method: 'GET',
           }),
         ])

@@ -62,9 +62,9 @@ export default function ElearningDetailPage() {
     const fetchData = async () => {
       try {
         const [courseRes, weeksRes] = await Promise.all([
-          apiRequest({ endpoint: `/api/courses/${courseId}`, method: 'GET' }),
+          apiRequest({ endpoint: `/courses/${courseId}`, method: 'GET' }),
           apiRequest({
-            endpoint: `/api/courses/${courseId}/weeks-with-modules`,
+            endpoint: `/courses/${courseId}/weeks-with-modules`,
             method: 'GET',
           }),
         ])

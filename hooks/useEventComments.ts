@@ -28,7 +28,7 @@ export function useEventComments(
     const fetchComments = async () => {
       try {
         const res = await apiRequest({
-          endpoint: `/api/webinars/${eventId}/comments`,
+          endpoint: `/webinars/${eventId}/comments`,
           method: 'GET',
         })
 
@@ -55,7 +55,7 @@ export function useEventComments(
     try {
       setPosting(true)
       await apiRequest({
-        endpoint: `/api/webinars/${eventId}/comments`,
+        endpoint: `/webinars/${eventId}/comments`,
         method: 'POST',
         body: { userId, comment: text },
       })

@@ -71,7 +71,7 @@ export default function ModuleLecturePage() {
     const fetchModule = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/modules/${moduleId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/modules/${moduleId}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -94,7 +94,7 @@ export default function ModuleLecturePage() {
 
   const fetchComments = async (pageNo = 1) => {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/courses/${courseId}/modules/${moduleId}/comments?page=${pageNo}&limit=${COMMENTS_LIMIT}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/modules/${moduleId}/comments?page=${pageNo}&limit=${COMMENTS_LIMIT}`,
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -119,7 +119,7 @@ export default function ModuleLecturePage() {
     setPosting(true)
 
     await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/courses/${courseId}/modules/${moduleId}/comments`,
+      `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/modules/${moduleId}/comments`,
       {
         method: 'POST',
         headers: {

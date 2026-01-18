@@ -98,7 +98,7 @@ export default function EventDetailPage({ type }: Props) {
     const captureAttendance = async () => {
       try {
         await apiRequest({
-          endpoint: `/api/webinar/${id}/attend`,
+          endpoint: `/webinar/${id}/attend`,
           method: 'POST',
         })
       } catch {

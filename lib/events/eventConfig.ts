@@ -14,21 +14,21 @@ export const eventConfig: Record<
 > = {
   webinar: {
     title: 'USI Webinars',
-    listEndpoint: '/api/webinars/usi/active',
+    listEndpoint: '/webinars/usi/active',
     backRoute: '/webinar',
     notFoundText: 'Webinar not found',
     detailRoute: '/webinar',
   },
   program: {
     title: 'Smart Learning Program',
-    listEndpoint: '/api/webinars/smart-learning/active',
+    listEndpoint: '/webinars/smart-learning/active',
     backRoute: '/program',
     notFoundText: 'Program not found',
     detailRoute: '/program',
   },
   workshop: {
     title: 'Live Workshops',
-    listEndpoint: '/api/webinars/live-workshops/active',
+    listEndpoint: '/webinars/live-workshops/active',
     backRoute: '/workshop',
     notFoundText: 'Workshop not found',
     detailRoute: '/workshop',

@@ -37,7 +37,7 @@ export default function TopicDetailPage() {
 
     const fetchTopic = async () => {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/topics/${topicId}`
+        `${process.env.NEXT_PUBLIC_API_URL}/topics/${topicId}`
       )
       const json = await res.json()
       setTopic(json.data)
@@ -53,7 +53,7 @@ export default function TopicDetailPage() {
     if (!topic) return
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments?page=${pageNo}&limit=${COMMENTS_LIMIT}`
+      `${process.env.NEXT_PUBLIC_API_URL}/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments?page=${pageNo}&limit=${COMMENTS_LIMIT}`
     )
 
     const json = await res.json()
@@ -73,7 +73,7 @@ export default function TopicDetailPage() {
     setPosting(true)
 
     await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments`,
+      `${process.env.NEXT_PUBLIC_API_URL}/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments`,
       {
         method: 'POST',
         headers: {

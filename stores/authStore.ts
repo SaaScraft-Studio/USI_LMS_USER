@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   hydrateUser: async () => {
   try {
     const profile = await apiRequest({
-      endpoint: '/api/users/profile',
+      endpoint: '/users/profile',
       method: 'GET',
     })
 
@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     try {
       await apiRequest({
-        endpoint: '/api/users/logout',
+        endpoint: '/users/logout',
         method: 'POST',
       })
     } finally {

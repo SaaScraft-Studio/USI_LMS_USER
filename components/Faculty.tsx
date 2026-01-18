@@ -34,7 +34,7 @@ export default function Faculty({ webinarId }: { webinarId: string }) {
     const fetchFaculty = async () => {
       try {
         const res = await apiRequest<null, any>({
-          endpoint: `/api/assign-speakers/${webinarId}`,
+          endpoint: `/assign-speakers/${webinarId}`,
           method: 'GET',
         })
 
