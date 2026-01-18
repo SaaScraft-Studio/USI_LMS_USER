@@ -40,16 +40,42 @@ export default function SpeakerDetailsPage() {
   const [speaker, setSpeaker] = useState<any>(null)
   const [topicVideos, setTopicVideos] = useState<any[]>([])
   const [webinars, setWebinars] = useState<any[]>([])
+
   const [registeredConferenceIds, setRegisteredConferenceIds] = useState<string[]>([])
   const [registeredWebinarIds, setRegisteredWebinarIds] = useState<string[]>([])
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
-  const [registerType, setRegisterType] = useState<'conference' | 'webinar'>(
-    'webinar'
-  )
+  const [registerType, setRegisterType] = useState<'conference' | 'webinar'>('webinar')
   const [identifier, setIdentifier] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  /* ================= FETCH REGISTRATIONS (PRIORITY) ================= */
+
+  useEffect(() => {
+  if (!user?.id) return
+
+  apiRequest({
+    endpoint: `/api/conference/registrations/${user.id}`,
+    method: 'GET',
+  }).then((res) => {
+    setRegisteredConferenceIds(
+      res.data
+        .map((c: any) => c.conference?._id)
+        .filter(Boolean)
+    )
+  })
+
+  apiRequest({
+    endpoint: `/api/webinar/registrations/${user.id}`,
+    method: 'GET',
+  }).then((res) => {
+    setRegisteredWebinarIds(
+      res.data.map((w: any) => w.webinar._id)
+    )
+  })
+}, [user?.id])
+
 
   /* ================= FETCH SPEAKER DATA ================= */
 
@@ -65,7 +91,7 @@ export default function SpeakerDetailsPage() {
           name: `${res.speaker.prefix} ${res.speaker.speakerName}`,
           photo: res.speaker.speakerProfilePicture,
           qualification: res.speaker.affiliation,
-          location: `${res.speaker.country}, ${res.speaker.state}`,
+          location: `${res.speaker.state}, ${res.speaker.country}`,
         })
 
         setTopicVideos(res.topicVideos || [])
@@ -78,33 +104,13 @@ export default function SpeakerDetailsPage() {
     fetchData()
   }, [id])
 
-  /* ================= FETCH REGISTRATIONS ================= */
-
-  useEffect(() => {
-    if (!user?.id) return
-
-    apiRequest({
-      endpoint: `/api/conference/registrations/${user.id}`,
-      method: 'GET',
-    }).then((res) => {
-      setRegisteredConferenceIds(res.data.map((c: any) => c.conferenceId))
-    })
-
-    apiRequest({
-      endpoint: `/api/webinar/registrations/${user.id}`,
-      method: 'GET',
-    }).then((res) => {
-      setRegisteredWebinarIds(res.data.map((w: any) => w.webinar._id))
-    })
-  }, [user?.id])
-
   /* ================= UNIQUE CONFERENCES ================= */
 
   const conferences = useMemo(() => {
     const map = new Map<string, any>()
     topicVideos.forEach((t) => {
       const c = t.conferenceId
-      if (!map.has(c._id)) {
+      if (c?._id && !map.has(c._id)) {
         map.set(c._id, c)
       }
     })
@@ -137,7 +143,10 @@ export default function SpeakerDetailsPage() {
         })
 
         toast.success('Conference registered successfully 🎉')
-        setRegisteredConferenceIds((p) => [...p, selectedItem._id])
+
+        setRegisteredConferenceIds((prev) =>
+          Array.from(new Set([...prev, selectedItem._id]))
+        )
       } else {
         await apiRequest({
           endpoint: '/api/webinar/register',
@@ -150,7 +159,10 @@ export default function SpeakerDetailsPage() {
         })
 
         toast.success('Webinar registered successfully 🎉')
-        setRegisteredWebinarIds((p) => [...p, selectedItem._id])
+
+        setRegisteredWebinarIds((prev) =>
+          Array.from(new Set([...prev, selectedItem._id]))
+        )
       }
 
       setDialogOpen(false)
@@ -195,7 +207,7 @@ export default function SpeakerDetailsPage() {
         <span className="font-semibold">{speaker.name}</span>
       </div>
 
-      {/* TOP */}
+      {/* Top */}
       <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-6">
         <SpeakerHeader speaker={speaker} />
         <SponsorCard />
@@ -207,7 +219,7 @@ export default function SpeakerDetailsPage() {
           <h2 className="mt-10 mb-4 text-xl font-semibold">Conferences</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {conferences.map((c) => (
-              <Card key={c._id} className="rounded-2xl overflow-hidden shadow-md">
+              <Card key={c._id} className="p-0 rounded-2xl overflow-hidden shadow-md">
                 <div className="relative h-[220px] w-full">
                   <Image src={c.image} alt={c.name} fill className="object-cover" />
                 </div>

@@ -13,10 +13,13 @@ type Speaker = {
   photo: string
   institute: string
   location: string
-  videos: number
+  topicVideos: number
+  webinarVideos: number
+  totalVideos: number
 }
 
-const PAGE_SIZE = 9
+
+const PAGE_SIZE = 20
 
 export default function SpeakersPage() {
   const [search, setSearch] = useState('')
@@ -37,17 +40,20 @@ export default function SpeakersPage() {
         })
 
         const mapped: Speaker[] = res.data.map((item: any) => {
-          const s = item.speaker
+  const s = item.speaker
 
-          return {
-            id: s._id,
-            name: `${s.prefix} ${s.speakerName}`,
-            photo: s.speakerProfilePicture || '/speakers.png',
-            institute: s.affiliation || '—',
-            location: [s.state, s.country].filter(Boolean).join(', '),
-            videos: item.totalVideos ?? 0,
-          }
-        })
+  return {
+    id: s._id,
+    name: `${s.prefix} ${s.speakerName}`,
+    photo: s.speakerProfilePicture || '/speakers.png',
+    institute: s.affiliation || '—',
+    location: [s.state, s.country].filter(Boolean).join(', '),
+    topicVideos: item.topicVideos ?? 0,
+    webinarVideos: item.webinarVideos ?? 0,
+    totalVideos: item.totalVideos ?? 0,
+  }
+})
+
 
         setSpeakers(mapped)
       } finally {

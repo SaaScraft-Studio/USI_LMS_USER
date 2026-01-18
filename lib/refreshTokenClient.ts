@@ -1,33 +1,19 @@
 // lib/refreshTokenClient.ts
-"use client";
+'use client'
+
+/**
+ * ⚠️ DISABLED ON PURPOSE
+ *
+ * We use httpOnly cookie-based auth + Next.js middleware.
+ * Client-side refresh token handling causes infinite loops.
+ *
+ * Token refresh must be handled server-side only.
+ */
 
 export async function refreshTokenClient(): Promise<boolean> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/event-admin/refresh-token`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
-    );
+  // ❌ DO NOT refresh tokens on client
+  // ❌ DO NOT touch localStorage
+  // ❌ DO NOT redirect from here
 
-    if (!res.ok) throw new Error("Refresh failed");
-
-    const data = await res.json();
-
-    if (data?.accessToken) {
-      // ✅ keep token key consistent
-      localStorage.setItem("token", data.accessToken);
-      return true;
-    }
-
-    return false;
-  } catch {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-    return false;
-  }
+  return false
 }

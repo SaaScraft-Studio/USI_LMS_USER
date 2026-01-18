@@ -15,8 +15,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // 🔁 API PROXY (CRITICAL FOR COOKIE + MIDDLEWARE)
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://usi-lms.onrender.com/api/:path*',
+      },
+    ]
+  },
+
   webpack(config) {
-    // Add SVGR support for importing SVGs as React components
+    // SVG as React component support
     config.module.rules.push({
       test: /\.svg$/i,
       issuer: /\.[jt]sx?$/,
@@ -24,6 +35,7 @@ const nextConfig: NextConfig = {
     })
     return config
   },
+
   turbopack: {},
 }
 

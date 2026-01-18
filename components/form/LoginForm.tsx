@@ -72,6 +72,10 @@ const formatTime = (s: number) =>
 export default function LoginForm() {
   const router = useRouter()
   const setUser = useAuthStore((s) => s.setUser)
+  const hydrateUser = useAuthStore.getState().hydrateUser
+
+
+
 
   const [step, setStep] = useState<'LOGIN' | 'OTP'>('LOGIN')
   const [userId, setUserId] = useState<string | null>(null)
@@ -142,31 +146,46 @@ export default function LoginForm() {
   /*                              VERIFY OTP                                   */
   /* -------------------------------------------------------------------------- */
   const handleVerifyOtp = async (values: OtpValues) => {
-    if (!userId) return
+    if (!userId) {
+      toast.error('Session expired. Please login again.')
+      setStep('LOGIN')
+      return
+    }
 
     try {
       setVerifyingOtp(true)
+      console.log('VERIFY OTP PAYLOAD', {
+        userId,
+        otp: values.otp,
+      })
+
 
       const res = await apiRequest<
         { userId: string; otp: string },
-        { accessToken: string; user: any }
+        { user: any }
       >({
         endpoint: '/api/users/verify-otp',
         method: 'POST',
-        body: { userId, otp: values.otp },
+        body: {
+          userId,
+          otp: values.otp,
+        },
       })
 
-      setUser(res.user, res.accessToken)
+      setUser(res.user)
+      await useAuthStore.getState().hydrateUser()
+
       toast.success('Login successful')
       router.push('/mylearning')
     } catch (e: any) {
       otpForm.setError('otp', {
-        message: e.message || 'Invalid OTP',
+        message: e.message || 'Invalid or expired OTP',
       })
     } finally {
       setVerifyingOtp(false)
     }
   }
+
 
   /* -------------------------------------------------------------------------- */
   /*                                   UI                                       */

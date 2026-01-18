@@ -25,7 +25,7 @@ type RegistrationItem = {
   registeredOn: string
 }
 
-const PAGE_SIZE = 9
+const PAGE_SIZE = 20
 
 /* ================= PAGE ================= */
 
@@ -36,35 +36,55 @@ export default function MyLearningPage() {
   const [isFetching, setIsFetching] = useState(true)
 
   const user = useAuthStore((state) => state.user)
+const hydrateUser = useAuthStore((state) => state.hydrateUser)
+const isHydrated = useAuthStore((state) => state.isHydrated)
+
+useEffect(() => {
+  if (!isHydrated) {
+    hydrateUser()
+  }
+}, [isHydrated, hydrateUser])
+
 
   /* ================= FETCH ================= */
+useEffect(() => {
+  if (!isHydrated) return
 
-  useEffect(() => {
-    if (!user?.id) {
+  if (!user?.id) {
+    setIsFetching(false)
+    return
+  }
+
+  const fetchMyLearning = async () => {
+    try {
+      setIsFetching(true)
+
+      const res = await apiRequest({
+        endpoint: '/api/users/registrations',
+        method: 'GET',
+      })
+
+      console.log('REGISTRATIONS RESPONSE', res)
+
+      const registrations =
+        res?.data?.registrations ||
+        res?.registrations ||
+        res?.data ||
+        []
+
+      setItems(registrations)
+    } catch (error) {
+      console.error('Failed to fetch registrations', error)
+      setItems([])
+    } finally {
       setIsFetching(false)
-      return
     }
+  }
 
-    const fetchMyLearning = async () => {
-      try {
-        setIsFetching(true)
+  fetchMyLearning()
+}, [isHydrated, user?.id])
 
-        const res = await apiRequest({
-          endpoint: '/api/users/registrations',
-          method: 'GET',
-        })
 
-        setItems(res.data || [])
-      } catch (error) {
-        console.error('Failed to fetch registrations', error)
-        setItems([])
-      } finally {
-        setIsFetching(false)
-      }
-    }
-
-    fetchMyLearning()
-  }, [user?.id])
 
   /* ================= SEARCH ================= */
 
@@ -163,11 +183,8 @@ export default function MyLearningPage() {
                 {/* Image */}
                 <div className="relative h-[250px] w-full overflow-hidden">
                   <Image
-                    src={
-                      details.courseImage ||
-                      details.image ||
-                      '/avatar.png'
-                    }
+                    src={details.image || '/avatar.png'}
+
                     alt={details.courseName || details.name}
                     fill
                     className="object-fit transition-transform duration-500 group-hover:scale-110"
