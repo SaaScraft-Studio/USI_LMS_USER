@@ -1,7 +1,7 @@
 // lib/apiRequest.ts
 import { fetchClient } from './fetchClient'
 import { toast } from 'sonner'
-import { useAuthStore } from '@/stores/authStore'
+// import { useAuthStore } from '@/stores/authStore'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
