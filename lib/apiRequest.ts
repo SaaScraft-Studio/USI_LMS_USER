@@ -1,6 +1,7 @@
 // lib/apiRequest.ts
 import { fetchClient } from './fetchClient'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/authStore'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
@@ -52,6 +53,29 @@ export async function apiRequest<
         : JSON.stringify(body)
       : undefined,
   })
+
+  /* ------------------------------------------------------------------ */
+  /* 🔐 HARD SESSION EXPIRY (SINGLE SOURCE OF TRUTH)                     */
+  /* ------------------------------------------------------------------ */
+  // if (response.status === 401) {
+  //   // clear frontend auth state
+  //   const store = useAuthStore.getState()
+  //   await store.logout()
+
+  //   // redirect ONCE
+  //   if (typeof window !== 'undefined') {
+  //     window.location.replace('/login')
+  //   }
+
+  //   throw new Error('Session expired. Please login again.')
+  // }
+
+  /* ------------------------------------------------------------------ */
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null)
+    throw new Error(error?.message || 'Request failed')
+  }
 
   const data =
     response.status !== 204

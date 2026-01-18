@@ -1,6 +1,22 @@
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/stores/authStore'
+
 export default function Home() {
-  return (
-  redirect('/mylearning')
-  )
+  const router = useRouter()
+  const { user, isHydrated } = useAuthStore()
+
+  useEffect(() => {
+    if (!isHydrated) return
+
+    if (user) {
+      router.replace('/mylearning')
+    } else {
+      router.replace('/login')
+    }
+  }, [user, isHydrated, router])
+
+  return null
 }
