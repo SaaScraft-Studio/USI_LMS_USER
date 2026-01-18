@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('accessToken')?.value
   const { pathname } = request.nextUrl
+
+  const accessToken = request.cookies.get('accessToken')?.value
+  const refreshToken = request.cookies.get('refreshToken')?.value
 
   const protectedRoutes = [
     '/conference',
@@ -21,12 +23,35 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
 
-  if (isProtected && !token) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  /**
+   * 🔐 HARD LOGOUT
+   * No access token → block immediately
+   */
+  if (isProtected && !accessToken) {
+    const res = NextResponse.redirect(
+      new URL('/login', request.url)
+    )
+
+    // 🔥 clear cookies (best effort)
+    res.cookies.set('accessToken', '', {
+      path: '/',
+      maxAge: 0,
+    })
+    res.cookies.set('refreshToken', '', {
+      path: '/',
+      maxAge: 0,
+    })
+
+    return res
   }
 
-  if (pathname === '/login' && token) {
-    return NextResponse.redirect(new URL('/mylearning', request.url))
+  /**
+   * 🚫 Prevent visiting login when authenticated
+   */
+  if (pathname === '/login' && accessToken) {
+    return NextResponse.redirect(
+      new URL('/mylearning', request.url)
+    )
   }
 
   return NextResponse.next()

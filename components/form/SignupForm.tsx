@@ -75,7 +75,7 @@ export default function SignupForm() {
       setLoading(true)
 
       await apiRequest<SignupPayload, any>({
-        endpoint: '/api/users/register',
+        endpoint: '/users/register',
         method: 'POST',
         body: form,
         showToast: true,

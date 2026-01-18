@@ -60,7 +60,7 @@ useEffect(() => {
       setIsFetching(true)
 
       const res = await apiRequest({
-        endpoint: '/api/users/registrations',
+        endpoint: '/users/registrations',
         method: 'GET',
       })
 

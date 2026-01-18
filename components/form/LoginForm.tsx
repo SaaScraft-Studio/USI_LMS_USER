@@ -124,7 +124,7 @@ export default function LoginForm() {
       setSendingOtp(true)
 
       const res = await apiRequest<typeof payload, { userId: string }>({
-        endpoint: '/api/users/login',
+        endpoint: '/users/login',
         method: 'POST',
         body: payload,
       })
@@ -164,7 +164,7 @@ export default function LoginForm() {
         { userId: string; otp: string },
         { user: any }
       >({
-        endpoint: '/api/users/verify-otp',
+        endpoint: '/users/verify-otp',
         method: 'POST',
         body: {
           userId,
