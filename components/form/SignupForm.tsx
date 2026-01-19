@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { apiRequest } from '@/lib/apiRequest'
 import { getIndianFormattedDate } from '@/lib/formatIndianDate'
 import { countries } from '@/data/countries'
-
+import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -173,11 +173,14 @@ export default function SignupForm() {
                   checked={agree}
                   onCheckedChange={(v) => setAgree(!!v)}
                 />
-                <label htmlFor="terms">
+                <label htmlFor="terms" className="leading-relaxed">
                   I agree to{' '}
-                  <span className="text-orange-600">
+                  <Link
+                    href="/signup/term-and-condition"
+                    className="text-orange-600 font-medium hover:underline"
+                  >
                     Terms & Conditions
-                  </span>
+                  </Link>
                 </label>
               </div>
 

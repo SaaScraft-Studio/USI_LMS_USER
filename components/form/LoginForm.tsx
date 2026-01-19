@@ -297,15 +297,17 @@ export default function LoginForm() {
             )}
           </CardContent>
 
-          <CardFooter className="px-0 pt-4 text-sm text-center">
-            Not a USI Member?{' '}
-            <button
-              onClick={() => router.push('/signup')}
-              className="text-orange-600 font-medium hover:underline"
-            >
-              Signup
-            </button>
-          </CardFooter>
+          <CardFooter className="px-0 pt-4 text-sm text-center text-gray-500">
+  Not a USI Member?
+  <button
+    onClick={() => router.push('/signup')}
+    className="mx-1 text-orange-600 font-medium hover:underline"
+  >
+    Signup
+  </button>
+  Subject to USI Approval
+</CardFooter>
+
         </div>
 
         <div className="mt-6 text-center">
