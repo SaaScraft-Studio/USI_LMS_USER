@@ -16,7 +16,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { apiRequest } from '@/lib/apiRequest'
 import { toast } from 'sonner'
 import SpeakerHeader from '@/components/SpeakerHeader'
-import { CalendarDays, Clock } from 'lucide-react'
+import { CalendarDays, Clock ,Video, MapPin } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
 import CountdownTimer from '@/components/CountdownTimer'
 import SponsorCard from '@/components/SponsorCard'
@@ -230,13 +230,29 @@ export default function SpeakerDetailsPage() {
                     <CalendarDays size={14} />
                     {c.startDate} – {c.endDate}
                   </div>
+                
+
+<div className="mt-2 text-xs flex items-center gap-2">
+  {c.conferenceType === "Virtual" ? (
+    <>
+      <Video size={14} className="text-blue-600" />
+      <span className="text-blue-600 font-medium">Virtual</span>
+    </>
+  ) : (
+    <>
+      <MapPin size={14} className="text-green-600" />
+      <span className="text-green-600 font-medium">Physical</span>
+    </>
+  )}
+</div>
+
                 </CardContent>
 
-                <CardFooter>
+                <CardFooter className='mb-4'>
                   {registeredConferenceIds.includes(c._id) ? (
                     <Button
                       onClick={() => router.push(`/conference/${c._id}`)}
-                      className="w-full bg-blue-600"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       View Conference
                     </Button>
@@ -247,7 +263,7 @@ export default function SpeakerDetailsPage() {
                         setRegisterType('conference')
                         setDialogOpen(true)
                       }}
-                      className="w-full bg-green-600"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
                     >
                       Register Free
                     </Button>
@@ -265,7 +281,7 @@ export default function SpeakerDetailsPage() {
           <h2 className="mt-10 mb-4 text-xl font-semibold">Webinars</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {webinars.map((w) => (
-              <Card key={w._id} className="rounded-2xl overflow-hidden shadow-md">
+              <Card key={w._id} className="p-0 rounded-2xl overflow-hidden shadow-md">
                 <div className="relative h-[220px] w-full">
                   <Image src={w.image} alt={w.name} fill className="object-cover" />
                 </div>
@@ -290,11 +306,11 @@ export default function SpeakerDetailsPage() {
                   </div>
                 </CardContent>
 
-                <CardFooter>
+                <CardFooter className='mb-4'>
                   {registeredWebinarIds.includes(w._id) ? (
                     <Button
                       onClick={() => router.push(getWebinarDetailsUrl(w))}
-                      className="w-full bg-blue-600"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       View Details
                     </Button>
@@ -305,7 +321,7 @@ export default function SpeakerDetailsPage() {
                         setRegisterType('webinar')
                         setDialogOpen(true)
                       }}
-                      className="w-full bg-orange-600"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
                     >
                       Register Free
                     </Button>
@@ -336,7 +352,7 @@ export default function SpeakerDetailsPage() {
             <Button
               onClick={handleRegister}
               disabled={submitting}
-              className="w-full bg-blue-600"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               {submitting ? 'Submitting...' : 'Submit'}
             </Button>
