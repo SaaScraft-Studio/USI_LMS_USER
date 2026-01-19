@@ -7,7 +7,7 @@ let refreshPromise: Promise<void> | null = null
 
 async function refreshAccessToken() {
   if (!refreshPromise) {
-    refreshPromise = fetch('/api/admin/refresh-token', {
+    refreshPromise = fetch('/api/users/refresh-token', {
       method: 'POST',
       credentials: 'include',
     })
@@ -41,7 +41,7 @@ export async function fetchClient(
     credentials: 'include',
   })
 
-  const isRefreshRequest = url.includes('/admin/refresh-token')
+  const isRefreshRequest = url.includes('/users/refresh-token')
 
   // 🔐 Access token expired
   if (response.status === 401 && !isRefreshRequest) {
