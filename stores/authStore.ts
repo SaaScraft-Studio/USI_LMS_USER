@@ -42,7 +42,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: state.user ? { ...state.user, ...data } : state.user,
     })),
 
-  hydrateUser: async () => {
+ hydrateUser: async () => {
+  const { isHydrated } = useAuthStore.getState()
+  if (isHydrated) return   // 🔐 HARD GUARD
+
   try {
     const profile = await apiRequest({
       endpoint: '/users/profile',
@@ -51,7 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     set({
       user: {
-        id: profile._id,   // ✅ map _id → id
+        id: profile._id,
         name: profile.name,
         email: profile.email,
         mobile: profile.mobile,

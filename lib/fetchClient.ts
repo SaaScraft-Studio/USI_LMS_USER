@@ -7,7 +7,7 @@ let refreshPromise: Promise<void> | null = null
 
 async function refreshAccessToken() {
   if (!refreshPromise) {
-    refreshPromise = fetch('/api/users/refresh-token', {
+    refreshPromise = fetch('/users/refresh-token', {
       method: 'POST',
       credentials: 'include',
     })
@@ -63,17 +63,13 @@ export async function fetchClient(
     } catch {
       isRefreshing = false
 
-      // 🚨 HARD LOGOUT (NO PAGE RELOAD LOOP)
       const store = useAuthStore.getState()
       await store.logout()
 
-      // single redirect
-      if (typeof window !== 'undefined') {
-        window.location.replace('/login')
-      }
-
-      throw new Error('Session expired. Please login again.')
+      // ❌ DO NOT redirect here
+      throw new Error('Session expired')
     }
+
   }
 
   if (!response.ok) {

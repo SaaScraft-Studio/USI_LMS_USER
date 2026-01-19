@@ -8,15 +8,16 @@ export default function Home() {
   const router = useRouter()
   const { user, isHydrated } = useAuthStore()
 
-  useEffect(() => {
-    if (!isHydrated) return
+ useEffect(() => {
+  if (!isHydrated) return
 
-    if (user) {
-      router.replace('/mylearning')
-    } else {
-      router.replace('/login')
-    }
-  }, [user, isHydrated, router])
+  if (user) {
+    router.replace('/mylearning')
+  } else {
+    router.replace('/login')
+  }
+}, [isHydrated]) // 🔥 REMOVE `user`
+
 
   return null
 }
