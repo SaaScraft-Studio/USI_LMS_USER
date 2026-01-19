@@ -41,7 +41,7 @@ export async function fetchClient(
     credentials: 'include',
   })
 
-  const isRefreshRequest = url.includes('/api/admin/refresh-token')
+  const isRefreshRequest = url.includes('/admin/refresh-token')
 
   // 🔐 Access token expired
   if (response.status === 401 && !isRefreshRequest) {
