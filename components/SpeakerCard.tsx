@@ -75,12 +75,12 @@ export default function SpeakerCard({ speaker }: { speaker: SpeakerCardItem }) {
           <div className="pt-1 space-y-0.5 text-gray-700">
             <div className="flex items-center gap-2">
               <Film size={14} />
-              <span>Topic Videos: {speaker.topicVideos}</span>
+              <span>Conference Faculty: {speaker.topicVideos}</span>
             </div>
 
             <div className="flex items-center gap-2">
               <Video size={14} />
-              <span>Webinar Videos: {speaker.webinarVideos}</span>
+              <span>Program Videos: {speaker.webinarVideos}</span>
             </div>
 
             <div className="flex items-center gap-2 font-semibold text-gray-900">

@@ -16,12 +16,19 @@ import {
   UserCircle,
   CreditCard,
   Mic,
+  CalendarClock
 } from 'lucide-react'
 import clsx from 'clsx'
 
 /* ================= SIDEBAR ITEMS ================= */
 
 const sidebarItems = [
+
+{
+  name: 'Upcoming',
+  href: '/upcoming',
+  icon: <CalendarClock size={20} />,
+},
   {
     name: 'My Learning',
     href: '/mylearning',

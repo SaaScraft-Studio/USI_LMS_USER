@@ -26,7 +26,7 @@ import SkeletonLoading from '@/components/SkeletonLoading'
 
 /* ---------------- CONSTANTS ---------------- */
 
-const PAGE_SIZE = 9
+const PAGE_SIZE = 20
 
 type ConferenceTypeFilter = 'Virtual' | 'Physical' | 'All'
 

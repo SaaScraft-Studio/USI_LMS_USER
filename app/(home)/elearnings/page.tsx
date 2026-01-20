@@ -65,6 +65,27 @@ export default function CourseList() {
   /* registered */
   const [registeredIds, setRegisteredIds] = useState<string[]>([])
 
+
+  /* ---------------- FETCH REGISTRATIONS ---------------- */
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const fetchRegistrations = async () => {
+      try {
+        const res = await apiRequest<null, any>({
+          endpoint: `/course/registrations/${user.id}`,
+          method: 'GET',
+        })
+        setRegisteredIds(res.data.map((r: any) => r.course._id))
+      } catch {
+        /* silent */
+      }
+    }
+
+    fetchRegistrations()
+  }, [user?.id])
+
   /* ---------------- FETCH COURSES ---------------- */
 
   useEffect(() => {
@@ -86,25 +107,7 @@ export default function CourseList() {
     fetchCourses()
   }, [])
 
-  /* ---------------- FETCH REGISTRATIONS ---------------- */
-
-  useEffect(() => {
-    if (!user?.id) return
-
-    const fetchRegistrations = async () => {
-      try {
-        const res = await apiRequest<null, any>({
-          endpoint: `/course/registrations/${user.id}`,
-          method: 'GET',
-        })
-        setRegisteredIds(res.data.map((r: any) => r.course._id))
-      } catch {
-        /* silent */
-      }
-    }
-
-    fetchRegistrations()
-  }, [user?.id])
+  
 
   /* ---------------- FILTER (NO SORT HERE) ---------------- */
 
