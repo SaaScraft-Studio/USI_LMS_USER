@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://usi-lms.onrender.com/api/:path*',
+        destination: 'https://usilms.expocon.app/api/:path*',
       },
     ]
   },
