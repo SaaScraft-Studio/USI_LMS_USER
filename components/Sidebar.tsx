@@ -25,7 +25,7 @@ import clsx from 'clsx'
 const sidebarItems = [
 
 {
-  name: 'Upcoming',
+  name: 'Upcoming Programs',
   href: '/upcoming',
   icon: <CalendarClock size={20} />,
 },

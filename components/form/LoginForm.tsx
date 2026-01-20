@@ -176,7 +176,7 @@ export default function LoginForm() {
       await useAuthStore.getState().hydrateUser()
 
       toast.success('Login successful')
-      router.push('/mylearning')
+      router.push('/upcoming')
     } catch (e: any) {
       otpForm.setError('otp', {
         message: e.message || 'Invalid or expired OTP',
