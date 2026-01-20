@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Clock } from 'lucide-react'
 
 import {
   AlertDialog,
@@ -18,6 +18,7 @@ import { apiRequest } from '@/lib/apiRequest'
 import { toast } from 'sonner'
 import SkeletonLoading from '@/components/SkeletonLoading'
 import CountdownTimer from '@/components/CountdownTimer'
+import StatusBadge from '@/components/StatusBadge'
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -38,6 +39,7 @@ interface Webinar {
   startDate: string
   endDate: string
   startTime: string
+  endTime: string
   timeZone: string
   dynamicStatus: 'Upcoming' | 'Ongoing' | 'Completed'
 }
@@ -225,27 +227,29 @@ export default function UpcomingWebinars() {
                 />
               </div>
 
-              <CardContent className="flex flex-col gap-3 flex-grow">
-                <span className="text-xs font-medium px-2 py-1 rounded bg-blue-100 text-blue-700 w-fit">
-                  {w.webinarType}
-                </span>
+              <CardContent className="flex flex-col flex-grow">
+        <StatusBadge status={w.dynamicStatus} />
 
-                <h3 className="font-semibold text-sm line-clamp-2">
-                  {w.name}
-                </h3>
+        <h3 className="font-semibold text-sm line-clamp-2">{w.name}</h3>
 
-                <div className="text-xs text-gray-600 flex items-center gap-2">
-                  <CalendarDays size={14} />
-                  {w.startDate} – {w.endDate}
-                </div>
+        {w.dynamicStatus === 'Upcoming' && (
+          <CountdownTimer
+            startDate={w.startDate}
+            startTime={w.startTime}
+          />
+        )}
 
-                {w.dynamicStatus === 'Upcoming' && (
-                  <CountdownTimer
-                    startDate={w.startDate}
-                    startTime={w.startTime}
-                  />
-                )}
-              </CardContent>
+        <div className="mt-3 text-xs text-gray-600 space-y-2">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={14} />
+            {w.startDate} – {w.endDate}
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock size={14} />
+            {w.startTime} – {w.endTime}
+          </div>
+        </div>
+      </CardContent>
 
               <CardFooter className="p-4 pt-0">
                 {isRegistered ? (
