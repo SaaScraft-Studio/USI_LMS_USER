@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { MoreVertical, LogOut } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -34,58 +33,10 @@ const getImageUrl = (path?: string | null): string => {
 
 export default function DashboardNavbar() {
   const router = useRouter()
-  const { user, logout, updateUser } = useAuthStore()
-  const [imgError, setImgError] = useState(false)
-  const [loadingProfile, setLoadingProfile] = useState(false)
 
-  const profileSrc = imgError
-    ? '/avatar.png'
-    : getImageUrl(user?.profilePicture)
+  const { user, isHydrated, logout } = useAuthStore()
 
-  /* ---------------- FETCH PROFILE ---------------- */
-
- useEffect(() => {
-   const fetchProfile = async () => {
-     // prevent duplicate calls
-     if (user?.profilePicture || user?.name) return
-
-     const token = localStorage.getItem('token')
-     if (!token) return
-
-     try {
-       setLoadingProfile(true)
-
-       const res = await fetch(
-         `${process.env.NEXT_PUBLIC_API_URL}/users/profile`,
-         {
-           headers: {
-             Authorization: `Bearer ${token}`,
-           },
-         }
-       )
-
-       if (!res.ok) throw new Error('Failed to fetch profile')
-
-       const data = await res.json()
-
-       console.log('PROFILE API RESPONSE:', data) // 👈 DEBUG
-
-       updateUser({
-         name: data.name,
-         profilePicture: data.profilePicture || undefined,
-       })
-     } catch (error) {
-       console.error('Profile fetch error:', error)
-     } finally {
-       setLoadingProfile(false)
-     }
-   }
-
-   fetchProfile()
- }, [updateUser, user?.name, user?.profilePicture])
-
-
-  /* ---------------- LOGOUT ---------------- */
+  const profileSrc = getImageUrl(user?.profilePicture)
 
   const handleLogout = async () => {
     await logout()
@@ -93,26 +44,12 @@ export default function DashboardNavbar() {
   }
 
   return (
-    <header
-      className="
-        sticky top-0 z-50
-        bg-gradient-to-r from-[#B5D9FF] to-[#D6E7FF]
-        dark:from-[#1a1a1a] dark:via-[#222] dark:to-[#444]
-        shadow-md
-      "
-    >
+    <header className="sticky top-0 z-50 bg-gradient-to-r from-[#B5D9FF] to-[#D6E7FF] shadow-md">
       <div className="flex items-center justify-between h-16 px-4 md:px-[30px]">
         {/* ================= LEFT LOGOS ================= */}
         <Link href="/mylearning">
-          <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => router.push('/mylearning')}
-          >
-            <img
-              src="/urological.png"
-              alt="Urological Society of India"
-              className="h-12"
-            />
+          <div className="flex items-center gap-2 cursor-pointer">
+            <img src="/urological.png" alt="USI" className="h-12" />
             <p className="text-xs font-bold text-[#1F5C9E] leading-tight">
               Urological Society <br /> of India
             </p>
@@ -120,11 +57,7 @@ export default function DashboardNavbar() {
             <div className="h-10 w-[1px] bg-[#1F5C9E] mx-3" />
 
             <div className="flex items-center gap-2">
-              <img
-                src="/ISU_Logo.png"
-                alt="Indian School of Urology"
-                className="h-12"
-              />
+              <img src="/ISU_Logo.png" alt="ISU" className="h-12" />
               <p className="text-xs font-bold text-[#1F5C9E] leading-tight">
                 Indian School <br /> of Urology
               </p>
@@ -134,19 +67,18 @@ export default function DashboardNavbar() {
 
         {/* ================= RIGHT ================= */}
         <div className="flex items-center gap-4">
-          {/* ================= MOBILE MENU ================= */}
+          {/* ================= MOBILE ================= */}
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
+                <button className="p-2 rounded-full hover:bg-black/10">
                   <MoreVertical className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end" className="w-64 p-2">
-                {/* Profile */}
                 <DropdownMenuLabel className="flex items-center gap-3 p-2">
-                  {loadingProfile ? (
+                  {!isHydrated ? (
                     <Skeleton className="w-10 h-10 rounded-full" />
                   ) : (
                     <div className="w-10 h-10 rounded-full overflow-hidden border">
@@ -154,7 +86,6 @@ export default function DashboardNavbar() {
                         src={profileSrc}
                         alt="Profile"
                         className="w-full h-full object-cover"
-                        onError={() => setImgError(true)}
                       />
                     </div>
                   )}
@@ -168,7 +99,6 @@ export default function DashboardNavbar() {
 
                 <DropdownMenuSeparator />
 
-                {/* Logout */}
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="flex items-center gap-2 text-red-600"
@@ -180,10 +110,10 @@ export default function DashboardNavbar() {
             </DropdownMenu>
           </div>
 
-          {/* ================= DESKTOP PROFILE ================= */}
+          {/* ================= DESKTOP ================= */}
           <div className="hidden md:flex items-center gap-6">
             <button onClick={() => router.push('/myprofile')}>
-              {loadingProfile ? (
+              {!isHydrated ? (
                 <Skeleton className="w-[45px] h-[45px] rounded-full" />
               ) : (
                 <div className="w-[45px] h-[45px] rounded-full overflow-hidden border-2 border-white shadow-sm">
@@ -191,7 +121,6 @@ export default function DashboardNavbar() {
                     src={profileSrc}
                     alt="Profile"
                     className="w-full h-full object-cover"
-                    onError={() => setImgError(true)}
                   />
                 </div>
               )}

@@ -43,21 +43,23 @@ interface Props {
 export default function EventDetailPage({ type }: Props) {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const user = useAuthStore((s) => s.user)
   const cfg = eventConfig[type]
+  const { user, isHydrated } = useAuthStore()
 
   const { event, hasAccess, loading } = useEventAccess(id, user?.id)
 
   const settings = useEventSettings(id, hasAccess)
   const meeting = useEventMeeting(id, settings?.meeting)
-  const { comments, addComment, posting } = useEventComments(
-    id,
-    hasAccess,
-    user?.id
-  )
+  const {
+  comments,
+  commentText,
+  setCommentText,
+  addComment,
+  posting,
+} = useEventComments(id, hasAccess, user?.id)
+
 
   const [tab, setTab] = useState<TabType>('overview')
-  const [commentText, setCommentText] = useState('')
 
   const availableTabs = useMemo<TabType[]>(() => {
     const t: TabType[] = ['overview']
@@ -74,14 +76,15 @@ export default function EventDetailPage({ type }: Props) {
 
     return {
       overview: (
-        <Overview
-          description={DOMPurify.sanitize(event.description)}
-          comments={comments}
-          commentText={commentText}
-          setCommentText={setCommentText}
-          onAddComment={() => addComment(commentText)}
-          posting={posting}
-        />
+       <Overview
+  description={DOMPurify.sanitize(event.description)}
+  comments={comments}
+  commentText={commentText}
+  setCommentText={setCommentText}
+  onAddComment={addComment}
+  posting={posting || !isHydrated}
+/>
+
       ),
       faculty: <Faculty webinarId={id} />,
       faq: <FAQ webinarId={id} />,
