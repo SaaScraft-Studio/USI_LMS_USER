@@ -1,3 +1,9 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/stores/authStore'
+
 import Sidebar from '@/components/Sidebar'
 import DashboardNavbar from '@/components/DashboardNavbar'
 import MobileNavbar from '@/components/MobileNavbar'
@@ -7,6 +13,25 @@ export default function HomeLayout({
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+
+  const { isAuthenticated, isLoading, hydrate } = useAuthStore()
+
+  // =============================
+  // 🔐 AUTH BOOTSTRAP
+  // =============================
+  useEffect(() => {
+    hydrate()
+  }, [])
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login')
+    }
+  }, [isLoading, isAuthenticated, router])
+
+  // ⛔ Prevent UI flicker while checking auth
+  if (isLoading) return null
 
   return (
     <>
@@ -29,7 +54,5 @@ export default function HomeLayout({
         </main>
       </div>
     </>
-  );
+  )
 }
-
-

@@ -60,7 +60,7 @@ export default function EventListPage({ type }: Props) {
       try {
         setLoadingRegs(true)
         const res = await apiRequest({
-          endpoint: `/webinar/registrations/${user.id}`,
+          endpoint: `/api/webinar/registrations/${user.id}`,
           method: 'GET',
         })
         setRegisteredIds(res.data.map((r: any) => r.webinar._id))

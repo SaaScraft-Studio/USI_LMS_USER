@@ -1,5 +1,3 @@
-// components/events/EventDetailPage.tsx
-
 'use client'
 
 import { JSX, useEffect, useMemo, useState } from 'react'
@@ -44,20 +42,20 @@ export default function EventDetailPage({ type }: Props) {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const cfg = eventConfig[type]
-  const { user, isHydrated } = useAuthStore()
+
+  const { user, isLoading } = useAuthStore()
 
   const { event, hasAccess, loading } = useEventAccess(id, user?.id)
-
   const settings = useEventSettings(id, hasAccess)
   const meeting = useEventMeeting(id, settings?.meeting)
-  const {
-  comments,
-  commentText,
-  setCommentText,
-  addComment,
-  posting,
-} = useEventComments(id, hasAccess, user?.id)
 
+  const {
+    comments,
+    commentText,
+    setCommentText,
+    addComment,
+    posting,
+  } = useEventComments(id, hasAccess, user?.id)
 
   const [tab, setTab] = useState<TabType>('overview')
 
@@ -76,15 +74,14 @@ export default function EventDetailPage({ type }: Props) {
 
     return {
       overview: (
-       <Overview
-  description={DOMPurify.sanitize(event.description)}
-  comments={comments}
-  commentText={commentText}
-  setCommentText={setCommentText}
-  onAddComment={addComment}
-  posting={posting || !isHydrated}
-/>
-
+        <Overview
+          description={DOMPurify.sanitize(event.description)}
+          comments={comments}
+          commentText={commentText}
+          setCommentText={setCommentText}
+          onAddComment={addComment}
+          posting={posting || isLoading}
+        />
       ),
       faculty: <Faculty webinarId={id} />,
       faq: <FAQ webinarId={id} />,
@@ -92,20 +89,19 @@ export default function EventDetailPage({ type }: Props) {
       quiz: <QuizTab webinarId={id} webinarTitle={event.name} />,
       question: <AskQuestion webinarId={id} />,
     }
-  }, [event, comments, commentText, posting, id])
+  }, [event, comments, commentText, posting, id, settings, isLoading])
 
-  // ✅ PLACE HERE — BEFORE RETURNS
   useEffect(() => {
     if (!hasAccess || !id) return
 
     const captureAttendance = async () => {
       try {
         await apiRequest({
-          endpoint: `/webinar/${id}/attend`,
+          endpoint: `/api/webinar/${id}/attend`,
           method: 'POST',
         })
       } catch {
-        // silent fail (already attended / outside window)
+        // silent
       }
     }
 
@@ -127,7 +123,6 @@ export default function EventDetailPage({ type }: Props) {
   if (!event) {
     return <div className="p-8 text-center">{cfg.notFoundText}</div>
   }
-
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">

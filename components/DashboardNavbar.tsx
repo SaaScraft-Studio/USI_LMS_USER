@@ -1,11 +1,12 @@
 'use client'
 
-import Image from 'next/image'
+import { useEffect, useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MoreVertical, LogOut } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthStore } from '@/stores/authStore'
+import { apiRequest } from '@/lib/apiRequest'
 
 import {
   DropdownMenu,
@@ -22,21 +23,58 @@ const getImageUrl = (path?: string | null): string => {
   if (!path) return '/avatar.png'
   if (path.startsWith('blob:')) return path
   if (path.startsWith('http://') || path.startsWith('https://')) return path
-
-  const base = process.env.NEXT_PUBLIC_API_URL
-  if (!base) return '/avatar.png'
-
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`
+  return path
 }
 
 /* ---------------- COMPONENT ---------------- */
 
 export default function DashboardNavbar() {
   const router = useRouter()
+  const { logout } = useAuthStore()
 
-  const { user, isHydrated, logout } = useAuthStore()
+  const [profilePic, setProfilePic] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string>('User')
+  const [isLoading, setIsLoading] = useState(true)
 
-  const profileSrc = getImageUrl(user?.profilePicture)
+  /* ================= FETCH PROFILE ================= */
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      setIsLoading(true)
+
+      const profile = await apiRequest<null, any>({
+        endpoint: '/api/users/profile',
+        method: 'GET',
+        showToast: false,
+      })
+
+      setProfilePic(profile.profilePicture || null)
+      setUserName(profile.name || 'User')
+    } catch {
+      setProfilePic(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  /* ================= INITIAL LOAD ================= */
+
+  useEffect(() => {
+    fetchProfile()
+  }, [fetchProfile])
+
+  /* ================= LISTEN PROFILE UPDATE ================= */
+
+  useEffect(() => {
+    const refetch = () => fetchProfile()
+    window.addEventListener('profile-updated', refetch)
+
+    return () => {
+      window.removeEventListener('profile-updated', refetch)
+    }
+  }, [fetchProfile])
+
+  const profileSrc = getImageUrl(profilePic)
 
   const handleLogout = async () => {
     await logout()
@@ -78,7 +116,7 @@ export default function DashboardNavbar() {
 
               <DropdownMenuContent align="end" className="w-64 p-2">
                 <DropdownMenuLabel className="flex items-center gap-3 p-2">
-                  {!isHydrated ? (
+                  {isLoading ? (
                     <Skeleton className="w-10 h-10 rounded-full" />
                   ) : (
                     <div className="w-10 h-10 rounded-full overflow-hidden border">
@@ -92,7 +130,7 @@ export default function DashboardNavbar() {
 
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold">
-                      {user?.name || 'User'}
+                      {userName}
                     </span>
                   </div>
                 </DropdownMenuLabel>
@@ -113,7 +151,7 @@ export default function DashboardNavbar() {
           {/* ================= DESKTOP ================= */}
           <div className="hidden md:flex items-center gap-6">
             <button onClick={() => router.push('/myprofile')}>
-              {!isHydrated ? (
+              {isLoading ? (
                 <Skeleton className="w-[45px] h-[45px] rounded-full" />
               ) : (
                 <div className="w-[45px] h-[45px] rounded-full overflow-hidden border-2 border-white shadow-sm">

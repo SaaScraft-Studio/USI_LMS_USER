@@ -16,16 +16,6 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // 🔁 API PROXY (CRITICAL FOR COOKIE + MIDDLEWARE)
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'https://usi-lms.onrender.com/api/:path*',
-      },
-    ]
-  },
-
   webpack(config) {
     // SVG as React component support
     config.module.rules.push({

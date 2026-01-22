@@ -10,11 +10,14 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { useAuthStore } from '@/stores/authStore'
-import { apiRequest } from '@/lib/apiRequest'
 import SkeletonLoading from '@/components/SkeletonLoading'
+
+import { useAuthStore } from '@/stores/authStore'
+import { fetcher } from '@/lib/fetcher'
+import useSWR from 'swr'
 
 /* ================= TYPES ================= */
 
@@ -25,66 +28,39 @@ type RegistrationItem = {
   registeredOn: string
 }
 
+type RegistrationsResponse = {
+  success: boolean
+  total: number
+  coursesCount: number
+  webinarsCount: number
+  data: RegistrationItem[]
+}
+
 const PAGE_SIZE = 20
 
 /* ================= PAGE ================= */
 
 export default function MyLearningPage() {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL!
+
   const [search, setSearch] = useState('')
-  const [items, setItems] = useState<RegistrationItem[]>([])
   const [page, setPage] = useState(1)
-  const [isFetching, setIsFetching] = useState(true)
 
-  const user = useAuthStore((state) => state.user)
-const hydrateUser = useAuthStore((state) => state.hydrateUser)
-const isHydrated = useAuthStore((state) => state.isHydrated)
+  const { user, isLoading } = useAuthStore()
 
-useEffect(() => {
-  if (!isHydrated) {
-    hydrateUser()
-  }
-}, [isHydrated, hydrateUser])
+  /* ================= FETCH (GET → fetcher) ================= */
 
+  const { data, isLoading: isFetching } = useSWR<RegistrationsResponse>(
+    !isLoading && user?.id
+      ? `${API_BASE}/api/users/registrations`
+      : null,
+    fetcher
+  )
 
-  /* ================= FETCH ================= */
-useEffect(() => {
-  if (!isHydrated) return
-
-  if (!user?.id) {
-    setIsFetching(false)
-    return
-  }
-
-  const fetchMyLearning = async () => {
-    try {
-      setIsFetching(true)
-
-      const res = await apiRequest({
-        endpoint: '/users/registrations',
-        method: 'GET',
-      })
-
-      console.log('REGISTRATIONS RESPONSE', res)
-
-      const registrations =
-        res?.data?.registrations ||
-        res?.registrations ||
-        res?.data ||
-        []
-
-      setItems(registrations)
-    } catch (error) {
-      console.error('Failed to fetch registrations', error)
-      setItems([])
-    } finally {
-      setIsFetching(false)
-    }
-  }
-
-  fetchMyLearning()
-}, [isHydrated, user?.id])
-
-
+  // ✅ FIXED: backend returns `data: RegistrationItem[]`
+  const items: RegistrationItem[] = Array.isArray(data?.data)
+    ? data!.data
+    : []
 
   /* ================= SEARCH ================= */
 
@@ -92,10 +68,11 @@ useEffect(() => {
     const q = search.trim().toLowerCase()
     if (!q) return items
 
-    return items.filter((item) =>
-      (item.type === 'course'
-        ? item.details.courseName
-        : item.details.name
+    return items.filter((item: RegistrationItem) =>
+      (
+        item.type === 'course'
+          ? item.details.courseName
+          : item.details.name
       )
         ?.toLowerCase()
         .includes(q)
@@ -171,7 +148,7 @@ useEffect(() => {
       {/* Cards */}
       {paginatedItems.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {paginatedItems.map((item) => {
+          {paginatedItems.map((item: RegistrationItem) => {
             const { details } = item
             const action = getActionConfig(item)
 
@@ -184,7 +161,6 @@ useEffect(() => {
                 <div className="relative h-[250px] w-full overflow-hidden">
                   <Image
                     src={details.image || '/avatar.png'}
-
                     alt={details.courseName || details.name}
                     fill
                     className="object-fit transition-transform duration-500 group-hover:scale-110"

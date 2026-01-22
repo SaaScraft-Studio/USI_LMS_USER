@@ -1,9 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import useSWR, { mutate } from 'swr'
 import Image from 'next/image'
 import Link from 'next/link'
 import { CalendarDays, Clock } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { fetcher } from '@/lib/fetcher'
+import { apiRequest } from '@/lib/apiRequest'
+import { useAuthStore } from '@/stores/authStore'
 
 import {
   AlertDialog,
@@ -13,9 +19,6 @@ import {
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
-import { useAuthStore } from '@/stores/authStore'
-import { apiRequest } from '@/lib/apiRequest'
-import { toast } from 'sonner'
 import SkeletonLoading from '@/components/SkeletonLoading'
 import CountdownTimer from '@/components/CountdownTimer'
 import StatusBadge from '@/components/StatusBadge'
@@ -67,63 +70,35 @@ export default function UpcomingWebinars() {
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
 
-  const [webinars, setWebinars] = useState<Webinar[]>([])
-  const [isFetching, setIsFetching] = useState(true)
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL
 
-  /* dialog */
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedWebinar, setSelectedWebinar] = useState<Webinar | null>(null)
-  const [identifier, setIdentifier] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+/* ---------------- FETCH WEBINARS ---------------- */
 
-  /* registered webinar ids */
-  const [registeredIds, setRegisteredIds] = useState<string[]>([])
+const {
+  data: webinarRes,
+  isLoading: webinarsLoading,
+} = useSWR<{ data: Webinar[] }>(
+  `${API_BASE}/api/webinars/upcoming`,
+  fetcher
+)
 
-   /* ---------------- FETCH REGISTRATIONS ---------------- */
+const webinars = webinarRes?.data ?? []
 
-  const fetchRegistrations = async () => {
-    if (!user?.id) return
+/* ---------------- FETCH REGISTRATIONS ---------------- */
 
-    try {
-      const res = await apiRequest<null, any>({
-        endpoint: `/webinar/registrations/${user.id}`,
-        method: 'GET',
-      })
+const {
+  data: registrationRes,
+} = useSWR<{ data: any[] }>(
+  user?.id
+    ? `${API_BASE}/api/webinar/registrations/${user.id}`
+    : null,
+  fetcher
+)
 
-      // backend returns { webinar: {...} }
-      setRegisteredIds(res.data.map((r: any) => r.webinar._id))
-    } catch {
-      setRegisteredIds([])
-    }
-  }
+  const registeredIds = useMemo(() => {
+    return registrationRes?.data?.map((r) => r.webinar._id) ?? []
+  }, [registrationRes])
 
-  useEffect(() => {
-    fetchRegistrations()
-  }, [user?.id])
-
-
-  /* ---------------- FETCH WEBINARS ---------------- */
-
-  useEffect(() => {
-    const fetchWebinars = async () => {
-      try {
-        setIsFetching(true)
-        const res = await apiRequest<null, any>({
-          endpoint: '/webinars/upcoming',
-          method: 'GET',
-        })
-        setWebinars(res.data || [])
-      } catch {
-        setWebinars([])
-      } finally {
-        setIsFetching(false)
-      }
-    }
-
-    fetchWebinars()
-  }, [])
-
- 
   /* ---------------- SEARCH ---------------- */
 
   const filteredWebinars = useMemo(() => {
@@ -132,10 +107,6 @@ export default function UpcomingWebinars() {
       w.name.toLowerCase().includes(q.toLowerCase())
     )
   }, [webinars, q])
-
-  useEffect(() => {
-    setPage(1)
-  }, [q])
 
   /* ---------------- PAGINATION ---------------- */
 
@@ -148,6 +119,11 @@ export default function UpcomingWebinars() {
 
   /* ---------------- REGISTER ---------------- */
 
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedWebinar, setSelectedWebinar] = useState<Webinar | null>(null)
+  const [identifier, setIdentifier] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
   const buildRegisterPayload = () => {
     if (/^\d{10}$/.test(identifier)) return { mobile: identifier }
     if (identifier.includes('@')) return { email: identifier }
@@ -155,13 +131,15 @@ export default function UpcomingWebinars() {
   }
 
   const handleRegister = async () => {
+    // 🔒 HARD GUARD
+    if (submitting) return
     if (!selectedWebinar || !identifier || !user?.id) return
 
-    try {
-      setSubmitting(true)
+    setSubmitting(true)
 
+    try {
       await apiRequest({
-        endpoint: '/webinar/register',
+        endpoint: '/api/webinar/register',
         method: 'POST',
         body: {
           webinarId: selectedWebinar._id,
@@ -172,21 +150,19 @@ export default function UpcomingWebinars() {
 
       toast.success('You have successfully registered 🎉')
 
-      // 🔥 re-fetch registrations immediately
-      await fetchRegistrations()
+      // ✅ Let SWR refetch
+      mutate(`${API_BASE}/api/webinar/registrations/${user.id}`)
 
       setDialogOpen(false)
       setIdentifier('')
     } catch (err: any) {
       toast.error(err.message || 'Registration failed')
-    } finally {
-      setSubmitting(false)
+      setSubmitting(false) // re-enable ONLY on error
     }
   }
+ /* ---------------- UI STATES ---------------- */
 
-  /* ---------------- LOADING ---------------- */
-
-  if (isFetching) {
+  if (webinarsLoading) {
     return <SkeletonLoading />
   }
 

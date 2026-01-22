@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Poppins, Francois_One } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
-import AuthProvider from '@/components/providers/AuthProvider'
 
 const poppins = Poppins({
   variable: '--font-poppins',
@@ -33,10 +32,9 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} ${francoisOne.variable} font-sans antialiased`}
       >
-          <AuthProvider>
             {children}
             <Toaster />
-          </AuthProvider>
+      
         
       </body>
     </html>

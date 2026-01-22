@@ -44,7 +44,7 @@ export default function EventRegisterDialog({
       setSubmitting(true)
 
       await apiRequest({
-        endpoint: '/webinar/register',
+        endpoint: '/api/webinar/register',
         method: 'POST',
         body: {
           webinarId: event._id,

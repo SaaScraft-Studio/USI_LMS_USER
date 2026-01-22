@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import useSWR from 'swr'
+import { useState } from 'react'
 import { apiRequest } from '@/lib/apiRequest'
+import { fetcher } from '@/lib/fetcher'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -13,100 +15,77 @@ export type Comment = {
   date?: string
 }
 
+const DEFAULT_AVATAR = '/default-avatar.png'
+
 export function useEventComments(
   eventId?: string,
   enabled?: boolean,
   userId?: string
 ) {
-  const { user, isHydrated } = useAuthStore()
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL!
+  const { user, isLoading } = useAuthStore()
 
-  const [comments, setComments] = useState<Comment[]>([])
   const [commentText, setCommentText] = useState('')
   const [posting, setPosting] = useState(false)
 
-  /* ---------- Fetch comments ---------- */
-  useEffect(() => {
-    if (!eventId || !enabled) return
+  /* ---------------- FETCH COMMENTS (GET → fetcher) ---------------- */
 
-    const fetchComments = async () => {
-      try {
-        const res = await apiRequest({
-          endpoint: `/webinars/${eventId}/comments`,
-          method: 'GET',
-        })
+  const { data, mutate } = useSWR<{ data: any[] }>(
+    eventId && enabled
+      ? `${API_BASE}/api/webinars/${eventId}/comments`
+      : null,
+    fetcher
+  )
 
-        setComments(
-          res.data.map((c: any) => ({
-            id: c._id,
-            author: c.userId?.name || 'Anonymous',
-            profile: c.userId?.profilePicture,
-            text: c.comment,
-            date: c.createdAt,
-          }))
-        )
-      } catch {
-        setComments([])
-      }
-    }
+  const comments: Comment[] =
+    data?.data?.map((c) => ({
+      id: c._id,
+      author: c.userId?.name || 'Anonymous',
+      profile: c.userId?.profilePicture || DEFAULT_AVATAR,
+      text: c.comment,
+      date: c.createdAt,
+    })) ?? []
 
-    fetchComments()
-  }, [eventId, enabled])
+  /* ---------------- ADD COMMENT (POST → apiRequest) ---------------- */
 
-  /* ---------- Add comment (optimistic) ---------- */
   const addComment = async () => {
+    if (posting) return
     if (!commentText.trim() || !eventId || !userId) return
+
+    setPosting(true)
 
     const tempId = `temp-${Date.now()}`
 
     const optimistic: Comment = {
       id: tempId,
       author: user?.name || 'You',
-      profile: isHydrated ? user?.profilePicture : undefined,
+      profile: user?.profilePicture || DEFAULT_AVATAR,
       text: commentText,
       date: new Date().toISOString(),
     }
 
-    setComments((prev) => [optimistic, ...prev])
     setCommentText('')
 
     try {
-      setPosting(true)
-
-      const res = await apiRequest({
-        endpoint: `/webinars/${eventId}/comments`,
+      await apiRequest({
+        endpoint: `/api/webinars/${eventId}/comments`,
         method: 'POST',
-        body: { userId, comment: optimistic.text },
+        body: {
+          userId,
+          comment: optimistic.text,
+        },
       })
 
       toast.success('Comment added')
 
-      setComments((prev) =>
-        prev.map((c) =>
-          c.id === tempId
-            ? { ...c, id: res.data._id, date: res.data.createdAt }
-            : c
-        )
-      )
+      // ✅ revalidate comments
+      mutate()
     } catch (err: any) {
-      setComments((prev) => prev.filter((c) => c.id !== tempId))
       toast.error(err.message || 'Failed to add comment')
     } finally {
       setPosting(false)
     }
   }
-
-  /* ---------- Upgrade avatar after hydration ---------- */
-  useEffect(() => {
-    if (!isHydrated || !user?.profilePicture) return
-
-    setComments((prev) =>
-      prev.map((c) =>
-        c.author === user.name && !c.profile
-          ? { ...c, profile: user.profilePicture }
-          : c
-      )
-    )
-  }, [isHydrated, user?.profilePicture, user?.name])
 
   return {
     comments,

@@ -1,39 +1,28 @@
-// hooks/useEventSettings.ts
-
 'use client'
 
-import { useEffect, useState } from 'react'
-import { apiRequest } from '@/lib/apiRequest'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 import { EventSettings } from '@/lib/events/eventTypes'
 
 export function useEventSettings(eventId?: string, enabled?: boolean) {
-  const [settings, setSettings] = useState<EventSettings | null>(null)
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL!
 
-  useEffect(() => {
-    if (!eventId || !enabled) return
+  const { data } = useSWR<{ data: Partial<EventSettings> }>(
+    eventId && enabled
+      ? `${API_BASE}/api/webinars/${eventId}/settings`
+      : null,
+    fetcher
+  )
 
-    const fetchSettings = async () => {
-      try {
-        const res = await apiRequest({
-          endpoint: `/webinars/${eventId}/settings`,
-          method: 'GET',
-        })
+  if (!data?.data) return null
 
-        setSettings({
-          faculty: !!res.data?.faculty,
-          faq: !!res.data?.faq,
-          feedback: !!res.data?.feedback,
-          quiz: !!res.data?.quiz,
-          meeting: !!res.data?.meeting,
-          question: !!res.data?.question,
-        })
-      } catch {
-        setSettings(null)
-      }
-    }
-
-    fetchSettings()
-  }, [eventId, enabled])
-
-  return settings
+  // ✅ Preserve original normalization logic
+  return {
+    faculty: !!data.data.faculty,
+    faq: !!data.data.faq,
+    feedback: !!data.data.feedback,
+    quiz: !!data.data.quiz,
+    meeting: !!data.data.meeting,
+    question: !!data.data.question,
+  } satisfies EventSettings
 }

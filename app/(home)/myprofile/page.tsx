@@ -25,8 +25,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { getIndianFormattedDate } from '@/lib/formatIndianDate'
+import { mutate } from 'swr'
 
 /* ================= CONSTANTS ================= */
+
+const FALLBACK_AVATAR = '/avatar.png'
 
 const READ_ONLY_FIELDS: (keyof ProfileData)[] = [
   'prefix',
@@ -48,7 +51,7 @@ const mapApiToForm = (user: any): ProfileData => ({
   state: user.state || '',
   city: user.city || '',
   pincode: user.pincode || '',
-  profilePicture: user.profilePicture || '/avatar.png',
+  profilePicture: user.profilePicture || FALLBACK_AVATAR,
 })
 
 /* ================= COMPONENT ================= */
@@ -57,7 +60,7 @@ export default function MyProfilePage() {
   const { updateUser } = useAuthStore()
 
   const [form, setForm] = useState<ProfileData | null>(null)
-  const [previewPhoto, setPreviewPhoto] = useState('/avatar.png')
+  const [previewPhoto, setPreviewPhoto] = useState(FALLBACK_AVATAR)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -70,20 +73,22 @@ export default function MyProfilePage() {
     const loadProfile = async () => {
       try {
         const profile = await apiRequest<null, any>({
-          endpoint: '/users/profile',
+          endpoint: '/api/users/profile',
           method: 'GET',
         })
 
         const mapped = mapApiToForm(profile)
+
         setForm(mapped)
-        setPreviewPhoto(mapped.profilePicture || '/avatar.png')
+        setPreviewPhoto(mapped.profilePicture ?? FALLBACK_AVATAR)
         setLastUpdated(profile.updatedAt)
 
+        // ✅ Sync auth store (optional but good)
         updateUser({
-          profilePicture: profile.profilePicture,
           name: profile.name,
           email: profile.email,
           mobile: profile.mobile,
+          profilePicture: mapped.profilePicture,
         })
       } catch (err: any) {
         toast.error(err.message || 'Failed to load profile')
@@ -104,13 +109,14 @@ export default function MyProfilePage() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
     setPhotoFile(file)
     setPreviewPhoto(URL.createObjectURL(file))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form) return
+    if (!form || isUpdating) return // ✅ double-submit guard
 
     try {
       setIsUpdating(true)
@@ -122,11 +128,23 @@ export default function MyProfilePage() {
 
       if (photoFile) fd.append('profilePicture', photoFile)
 
-      await apiRequest({
-        endpoint: '/users/profile',
+      const res = await apiRequest<FormData, any>({
+        endpoint: '/api/users/profile',
         method: 'PUT',
         body: fd,
       })
+
+      const updatedPic =
+        res?.profilePicture ||
+        res?.data?.profilePicture ||
+        previewPhoto ||
+        FALLBACK_AVATAR
+
+      // ✅ Update local auth store
+      updateUser({ profilePicture: updatedPic })
+
+      // ✅ 🔥 FORCE NAVBAR RE-FETCH
+      window.dispatchEvent(new Event('profile-updated'))
 
       toast.success('Profile updated successfully', {
         description: getIndianFormattedDate(),
@@ -142,13 +160,12 @@ export default function MyProfilePage() {
     }
   }
 
+
   /* ================= LOADING ================= */
 
   if (loading || !form) {
     return <Skeleton className="h-96 rounded-2xl" />
   }
-
-  /* ================= UI ================= */
 
   return (
     <div className="max-w-3xl mx-auto p-4">

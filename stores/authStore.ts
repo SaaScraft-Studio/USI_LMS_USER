@@ -1,79 +1,103 @@
-'use client'
-
 import { create } from 'zustand'
 import { apiRequest } from '@/lib/apiRequest'
 
-export type AuthUser = {
+interface User {
   id: string
   name: string
   email: string
-  mobile?: string
-  membershipNumber?: string
-  role: 'user'
-  status: 'Pending' | 'Approved'
+  mobile: string
+  role: string
   profilePicture?: string
 }
 
-type AuthState = {
-  user: AuthUser | null
-  isHydrated: boolean
+interface AuthState {
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
 
-  hydrateUser: () => Promise<void>
-  setUser: (user: AuthUser) => void
-  updateUser: (data: Partial<AuthUser>) => void
+  setUser: (user: User) => void
+  updateUser: (partial: Partial<User>) => void
+  clearUser: () => void
+  hydrate: () => Promise<void>
   logout: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isHydrated: false,
+  isAuthenticated: false,
+  isLoading: true,
 
-  /* ---------------- HYDRATE PROFILE ---------------- */
-  hydrateUser: async () => {
-    const { isHydrated } = get()
-    if (isHydrated) return // 🔐 HARD GUARD
+  setUser: (user) =>
+    set({
+      user,
+      isAuthenticated: true,
+      isLoading: false, // ✅ hydration finished
+    }),
 
+  updateUser: (partial) =>
+    set((state) => ({
+      user: state.user ? { ...state.user, ...partial } : state.user,
+    })),
+
+  clearUser: () =>
+    set({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    }),
+
+  hydrate: async () => {
     try {
-      const profile = await apiRequest({
-        endpoint: '/users/profile', // ✅ FULL API URL handled by apiRequest
+      const data = await apiRequest<
+        undefined,
+        {
+          authenticated: boolean
+          user: any
+        }
+      >({
+        endpoint: '/api/users/me',
         method: 'GET',
+        showToast: false,
       })
+
+      if (!data.authenticated) throw new Error()
 
       set({
         user: {
-          id: profile._id,
-          name: profile.name,
-          email: profile.email,
-          mobile: profile.mobile,
-          profilePicture: profile.profilePicture,
-          role: profile.role,
-          status: profile.status,
+          id: data.user._id,
+          name: data.user.name,
+          email: data.user.email,
+          mobile: data.user.mobile,
+          role: data.user.role,
+          profilePicture: data.user.profilePicture || '/avatar.png',
         },
-        isHydrated: true,
+        isAuthenticated: true,
+        isLoading: false,
       })
     } catch {
-      set({ user: null, isHydrated: true })
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      })
     }
   },
 
-  /* ---------------- SET USER ---------------- */
-  setUser: (user) => set({ user }),
-
-  /* ---------------- UPDATE USER (LIVE) ---------------- */
-  updateUser: (data) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, ...data } : state.user,
-    })),
-
-  /* ---------------- LOGOUT ---------------- */
   logout: async () => {
     try {
       await apiRequest({
-        endpoint: '/users/logout',
+        endpoint: '/api/users/logout',
         method: 'POST',
+        showToast: false,
       })
     } finally {
-      set({ user: null, isHydrated: true })
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      })
     }
   },
 }))
+

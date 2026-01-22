@@ -2,50 +2,54 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
-import { apiRequest } from '@/lib/apiRequest'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 import { EventDetail } from '@/lib/events/eventTypes'
 
 export function useEventAccess(eventId?: string, userId?: string) {
-  const [event, setEvent] = useState<EventDetail | null>(null)
-  const [hasAccess, setHasAccess] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL
 
-  useEffect(() => {
-    if (!eventId || !userId) return
+  /* ---------------- FETCH EVENT ---------------- */
 
-    const fetchData = async () => {
-      try {
-        const [eventRes, regRes] = await Promise.all([
-          apiRequest({
-            endpoint: `/webinars/active/${eventId}`,
-            method: 'GET',
-          }),
-          apiRequest({
-            endpoint: `/webinar/registrations/${userId}`,
-            method: 'GET',
-          }),
-        ])
+  const {
+    data: eventRes,
+    isLoading: eventLoading,
+  } = useSWR<{ data: EventDetail }>(
+    eventId ? `${API_BASE}/api/webinars/active/${eventId}` : null,
+    fetcher
+  )
 
-        const registeredIds = regRes.data.map((r: any) => r.webinar._id)
+  /* ---------------- FETCH REGISTRATIONS ---------------- */
 
-        if (!registeredIds.includes(eventId)) {
-          setHasAccess(false)
-          return
-        }
+  const {
+    data: regRes,
+    isLoading: regLoading,
+  } = useSWR<{ data: any[] }>(
+    userId ? `${API_BASE}/api/webinar/registrations/${userId}` : null,
+    fetcher
+  )
 
-        setHasAccess(true)
-        setEvent(eventRes.data)
-      } catch {
-        setEvent(null)
-        setHasAccess(false)
-      } finally {
-        setLoading(false)
-      }
+  /* ---------------- DERIVED STATE ---------------- */
+
+  const loading = eventLoading || regLoading
+
+  if (loading) {
+    return {
+      event: null,
+      hasAccess: false,
+      loading: true,
     }
+  }
 
-    fetchData()
-  }, [eventId, userId])
+  const registeredIds =
+    regRes?.data?.map((r) => r.webinar._id) ?? []
 
-  return { event, hasAccess, loading }
+  const hasAccess =
+    !!eventId && registeredIds.includes(eventId)
+
+  return {
+    event: hasAccess ? eventRes?.data ?? null : null,
+    hasAccess,
+    loading: false,
+  }
 }

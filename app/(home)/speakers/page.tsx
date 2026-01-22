@@ -35,7 +35,7 @@ export default function SpeakersPage() {
         setIsFetching(true)
 
         const res = await apiRequest<null, any>({
-          endpoint: '/speakers/global-stats',
+          endpoint: '/api/speakers/global-stats',
           method: 'GET',
         })
 
@@ -45,7 +45,7 @@ export default function SpeakersPage() {
   return {
     id: s._id,
     name: `${s.prefix} ${s.speakerName}`,
-    photo: s.speakerProfilePicture || '/speakers.png',
+    photo: s.speakerProfilePicture || '/avatar.png',
     institute: s.affiliation || '—',
     location: [s.state, s.country].filter(Boolean).join(', '),
     topicVideos: item.topicVideos ?? 0,
