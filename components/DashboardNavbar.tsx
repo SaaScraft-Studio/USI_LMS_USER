@@ -78,7 +78,8 @@ export default function DashboardNavbar() {
 
   const handleLogout = async () => {
     await logout()
-    router.push('/login')
+    router.replace('/login')
+    router.refresh()
   }
 
   return (
