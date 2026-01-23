@@ -24,7 +24,6 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
 
 /* ---------------- SAFE IMAGE URL ---------------- */
@@ -40,13 +39,15 @@ const getImageUrl = (path?: string | null): string => {
 
 export default function DashboardNavbar() {
   const router = useRouter()
-  const { logout } = useAuthStore()
+
+  const clearUser = useAuthStore((s) => s.clearUser)
 
   const [profilePic, setProfilePic] = useState<string | null>(null)
-  const [userName, setUserName] = useState('User')
+  const [userName, setUserName] = useState<string>('User')
   const [isLoading, setIsLoading] = useState(true)
 
   const [logoutOpen, setLogoutOpen] = useState(false)
+  const [sessionExpired, setSessionExpired] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
   /* ================= FETCH PROFILE ================= */
@@ -70,9 +71,13 @@ export default function DashboardNavbar() {
     }
   }, [])
 
+  /* ================= INITIAL LOAD ================= */
+
   useEffect(() => {
     fetchProfile()
   }, [fetchProfile])
+
+  /* ================= PROFILE UPDATED EVENT ================= */
 
   useEffect(() => {
     const refetch = () => fetchProfile()
@@ -80,33 +85,50 @@ export default function DashboardNavbar() {
     return () => window.removeEventListener('profile-updated', refetch)
   }, [fetchProfile])
 
-  const profileSrc = getImageUrl(profilePic)
+  /* ================= SESSION EXPIRED EVENT ================= */
 
-  /* ================= CONFIRM LOGOUT ================= */
+  useEffect(() => {
+    const handler = () => setSessionExpired(true)
+    window.addEventListener('session-expired', handler)
+    return () => window.removeEventListener('session-expired', handler)
+  }, [])
 
-  const confirmLogout = async () => {
-    if (loggingOut) return // ✅ double-click guard
+  /* ================= LOGOUT HANDLER ================= */
+
+  const performLogout = async () => {
+    if (loggingOut) return // 🔒 double-click guard
 
     try {
       setLoggingOut(true)
 
-      await logout()
+      await apiRequest({
+        endpoint: '/api/users/logout',
+        method: 'POST',
+        showToast: false,
+      })
 
-      // 🔥 close dialog ONLY after logout success
+      clearUser()
       setLogoutOpen(false)
+      setSessionExpired(false)
 
       router.replace('/login')
       router.refresh()
+    } catch (err: any) {
+      // ❗ dialog stays open → retry possible
     } finally {
       setLoggingOut(false)
     }
   }
 
+  const profileSrc = getImageUrl(profilePic)
+
+  /* ================= UI ================= */
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-gradient-to-r from-[#B5D9FF] to-[#D6E7FF] shadow-md">
         <div className="flex items-center justify-between h-16 px-4 md:px-[30px]">
-          {/* LEFT */}
+          {/* ================= LEFT LOGOS ================= */}
           <Link href="/mylearning">
             <div className="flex items-center gap-2 cursor-pointer">
               <img src="/urological.png" alt="USI" className="h-12" />
@@ -125,9 +147,9 @@ export default function DashboardNavbar() {
             </div>
           </Link>
 
-          {/* RIGHT */}
+          {/* ================= RIGHT ================= */}
           <div className="flex items-center gap-4">
-            {/* MOBILE */}
+            {/* ================= MOBILE ================= */}
             <div className="md:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -150,7 +172,9 @@ export default function DashboardNavbar() {
                       </div>
                     )}
 
-                    <span className="text-sm font-semibold">{userName}</span>
+                    <span className="text-sm font-semibold">
+                      {userName}
+                    </span>
                   </DropdownMenuLabel>
 
                   <DropdownMenuSeparator />
@@ -166,7 +190,7 @@ export default function DashboardNavbar() {
               </DropdownMenu>
             </div>
 
-            {/* DESKTOP */}
+            {/* ================= DESKTOP ================= */}
             <div className="hidden md:flex items-center gap-6">
               <button onClick={() => router.push('/myprofile')}>
                 {isLoading ? (
@@ -193,8 +217,8 @@ export default function DashboardNavbar() {
         </div>
       </header>
 
-      {/* ================= LOGOUT DIALOG ================= */}
-      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+      {/* ================= LOGOUT CONFIRM DIALOG ================= */}
+      <AlertDialog open={logoutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
@@ -205,21 +229,48 @@ export default function DashboardNavbar() {
           </AlertDialogHeader>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={loggingOut}>
-              Cancel
-            </AlertDialogCancel>
-
-            {/* 👇 CUSTOM BUTTON (NO AUTO CLOSE) */}
             <button
-              onClick={confirmLogout}
               disabled={loggingOut}
-              className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              onClick={() => setLogoutOpen(false)}
+              className="px-4 py-2 rounded-md border"
             >
-              {loggingOut ? (
+              Cancel
+            </button>
+
+            <button
+              disabled={loggingOut}
+              onClick={performLogout}
+              className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-white disabled:opacity-60"
+            >
+              {loggingOut && (
                 <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Logout'
               )}
+              Logout
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ================= SESSION EXPIRED DIALOG ================= */}
+      <AlertDialog open={sessionExpired}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Session Expired</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your session has expired. Please login again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <button
+              onClick={performLogout}
+              disabled={loggingOut}
+              className="inline-flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-white disabled:opacity-60"
+            >
+              {loggingOut && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Login Again
             </button>
           </AlertDialogFooter>
         </AlertDialogContent>
