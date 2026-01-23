@@ -28,11 +28,7 @@ export async function apiRequest<
 }: ApiRequestConfig<TBody, TResponse>): Promise<TResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL!
 
-  // ✅ SUPPORT RELATIVE + ABSOLUTE BASE URL
-  const url =
-    baseUrl.startsWith('http')
-      ? new URL(`${baseUrl}${endpoint}`)
-      : new URL(`${baseUrl}${endpoint}`, window.location.origin)
+  const url = new URL(`${baseUrl}${endpoint}`)
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -53,10 +49,26 @@ export async function apiRequest<
       : undefined,
   })
 
+  /* ======================================================
+     🔐 GLOBAL SESSION HANDLING (PLACE IT HERE)
+     ====================================================== */
+  if (response.status === 401 || response.status === 403) {
+    window.dispatchEvent(new Event('session-expired'))
+    throw new Error('Session expired')
+  }
+
+  /* ====================================================== */
+
   const data =
     response.status !== 204
       ? ((await response.json()) as TResponse)
       : ({} as TResponse)
+
+  if (!response.ok) {
+    throw new Error(
+      (data as any)?.message || 'Something went wrong'
+    )
+  }
 
   if (showToast) {
     toast.success(successMessage || 'Operation completed successfully')
