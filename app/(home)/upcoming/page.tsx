@@ -23,6 +23,22 @@ import SkeletonLoading from '@/components/SkeletonLoading'
 import CountdownTimer from '@/components/CountdownTimer'
 import StatusBadge from '@/components/StatusBadge'
 
+
+/* ---------------- DATE HELPERS ---------------- */
+
+// Converts "DD/MM/YYYY" → Date
+const parseDDMMYYYY = (dateStr: string): Date => {
+  if (!dateStr) return new Date(0)
+
+  const [day, month, year] = dateStr.split('/').map(Number)
+
+  // Safety guard (handles "/02/2026" bug)
+  if (!day || !month || !year) return new Date(0)
+
+  return new Date(year, month - 1, day) // JS months are 0-based
+}
+
+
 /* ---------------- CONSTANTS ---------------- */
 
 const PAGE_SIZE = 20
@@ -102,11 +118,23 @@ const {
   /* ---------------- SEARCH ---------------- */
 
   const filteredWebinars = useMemo(() => {
-    if (!q.trim()) return webinars
-    return webinars.filter((w) =>
+  let list = webinars
+
+  // 🔍 Search
+  if (q.trim()) {
+    list = list.filter((w) =>
       w.name.toLowerCase().includes(q.toLowerCase())
     )
-  }, [webinars, q])
+  }
+
+  // 📅 Sort by earliest startDate
+  return [...list].sort((a, b) => {
+    const dateA = parseDDMMYYYY(a.startDate)
+    const dateB = parseDDMMYYYY(b.startDate)
+    return dateA.getTime() - dateB.getTime()
+  })
+}, [webinars, q])
+
 
   /* ---------------- PAGINATION ---------------- */
 
