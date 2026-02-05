@@ -40,6 +40,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp'
+import { TechnicalSupportUI } from '@/components/TechnicalSupportUI'
 
 /* -------------------------------------------------------------------------- */
 /*                                   CONFIG                                   */
@@ -416,6 +417,8 @@ export default function LoginPage() {
           </div>
         </Card>
       </main>
+      {/* Technical support UI like name email query message */}
+      <TechnicalSupportUI />
 
       {/* ================= FOOTER ================= */}
       <Card className="rounded-none border-t bg-white/20 backdrop-blur-xl">
