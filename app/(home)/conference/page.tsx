@@ -153,7 +153,7 @@ export default function ConferenceList() {
       setSubmitting(true)
 
       await apiRequest({
-        endpoint: '/conference/register',
+        endpoint: '/api/conference/register',
         method: 'POST',
         body: {
           conferenceId: selectedConference._id,

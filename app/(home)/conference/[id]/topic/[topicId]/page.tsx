@@ -6,11 +6,16 @@ import DOMPurify from 'dompurify'
 import { useAuthStore } from '@/stores/authStore'
 import SponsorCard from '@/components/SponsorCard'
 import getPaginationPages from '@/utils/getPaginationPages'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
+import { apiRequest } from '@/lib/apiRequest'
+
 
 const COMMENTS_LIMIT = 50
 
 export default function TopicDetailPage() {
   const router = useRouter()
+
   const { id: conferenceId, topicId } = useParams<{
     id: string
     topicId: string
@@ -18,87 +23,89 @@ export default function TopicDetailPage() {
 
   const { user } = useAuthStore()
 
-  const [topic, setTopic] = useState<any>(null)
-  const [comments, setComments] = useState<any[]>([])
-  const [totalComments, setTotalComments] = useState(0)
   const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] =
     useState<'overview' | 'faculty'>('overview')
   const [commentText, setCommentText] = useState('')
   const [posting, setPosting] = useState(false)
 
-  const totalPages = Math.ceil(totalComments / COMMENTS_LIMIT)
-
   /* ================= FETCH TOPIC ================= */
 
-  useEffect(() => {
-    if (!topicId) return
+  const {
+    data: topicRes,
+    isLoading: topicLoading,
+    error: topicError,
+  } = useSWR(
+    topicId
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/topics/${topicId}`
+      : null,
+    fetcher
+  )
 
-    const fetchTopic = async () => {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/topics/${topicId}`
-      )
-      const json = await res.json()
-      setTopic(json.data)
-      setLoading(false)
-    }
-
-    fetchTopic()
-  }, [topicId])
+  const topic = topicRes?.data
 
   /* ================= FETCH COMMENTS ================= */
 
-  const fetchComments = async (pageNo = 1) => {
-    if (!topic) return
+  const {
+    data: commentsRes,
+    isLoading: commentsLoading,
+    mutate: mutateComments,
+  } = useSWR(
+    topic
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments?page=${page}&limit=${COMMENTS_LIMIT}`
+      : null,
+    fetcher
+  )
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments?page=${pageNo}&limit=${COMMENTS_LIMIT}`
-    )
-
-    const json = await res.json()
-    setTotalComments(json.total || 0)
-    setComments(pageNo === 1 ? json.data : [...json.data])
-  }
-
-  useEffect(() => {
-    if (topic) fetchComments(1)
-  }, [topic])
+  const comments = commentsRes?.data ?? []
+  const totalComments = commentsRes?.total ?? 0
+  const totalPages = Math.ceil(totalComments / COMMENTS_LIMIT)
 
   /* ================= POST COMMENT ================= */
 
   const handlePostComment = async () => {
-    if (!commentText.trim() || !user || !topic) return
+    if (!commentText.trim() || !user || !topic || posting) return
 
-    setPosting(true)
+    try {
+      setPosting(true)
 
-    await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments`,
-      {
+      await apiRequest<
+        { userId: string; comment: string },
+        any
+      >({
+        endpoint: `/api/conferences/${conferenceId}/sessions/${topic.sessionId._id}/topics/${topic._id}/comments`,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
+        body: {
           userId: user.id,
           comment: commentText,
-        }),
-      }
-    )
+        },
+        showToast: false,
+      })
 
-    setCommentText('')
-    setPage(1)
-    await fetchComments(1)
-    setPosting(false)
+      setCommentText('')
+      setPage(1)
+      await mutateComments() // ✅ revalidate comments
+    } finally {
+      setPosting(false)
+    }
   }
 
-  if (loading || !topic) {
+  /* ================= LOADING / ERROR ================= */
+
+  if (topicLoading || !topic) {
     return (
       <div className="max-w-5xl mx-auto p-6 animate-pulse space-y-4">
         <div className="h-6 bg-gray-200 rounded w-1/3" />
         <div className="h-10 bg-gray-200 rounded w-2/3" />
         <div className="h-64 bg-gray-200 rounded-xl" />
+      </div>
+    )
+  }
+
+  if (topicError) {
+    return (
+      <div className="max-w-5xl mx-auto p-6 text-red-600">
+        Failed to load topic
       </div>
     )
   }
@@ -195,7 +202,7 @@ export default function TopicDetailPage() {
 
               {/* COMMENTS */}
               <div className="space-y-4">
-                {comments.map((c) => (
+                {comments.map((c: any) => (
                   <div key={c._id} className="border rounded-lg p-4">
                     <div className="flex items-center gap-3">
                       <img
@@ -229,7 +236,7 @@ export default function TopicDetailPage() {
                         key={p}
                         onClick={() => {
                           setPage(p)
-                          fetchComments(p)
+                          mutateComments(p)
                         }}
                         className={`px-3 py-1 rounded-md text-sm ${
                           p === page
