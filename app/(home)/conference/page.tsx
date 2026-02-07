@@ -75,7 +75,7 @@ export default function ConferenceList() {
       try {
         setIsFetching(true)
         const res = await apiRequest<null, any>({
-          endpoint: '/api/conferences/activ',
+          endpoint: '/api/conferences/active',
           method: 'GET',
         })
         setConferences(res.data || [])
