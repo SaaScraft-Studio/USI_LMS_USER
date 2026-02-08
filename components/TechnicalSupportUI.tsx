@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
+import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -82,7 +82,7 @@ const [copied, setCopied] = useState(false);
       },
     });
   } catch (error) {
-    console.error(error);
+  toast.error((error as Error).message)
   } finally {
     setLoading(false);
   }
@@ -137,11 +137,11 @@ const [copied, setCopied] = useState(false);
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Your Communication Email Address *
+                        USI LMS Registered Email Address *
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter your communication email address"
+                          placeholder="Enter your usi lms registrerd email address"
                           {...field}
                         />
                       </FormControl>

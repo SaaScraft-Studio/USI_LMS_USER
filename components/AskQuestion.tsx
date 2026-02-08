@@ -94,7 +94,7 @@ export default function AskQuestion({ webinarId }: AskQuestionProps) {
   const fetchQuestions = async () => {
     try {
       const res = await apiRequest({
-        endpoint: `/webinars/${webinarId}/questions`,
+        endpoint: `/api/webinars/${webinarId}/questions`,
         method: 'GET',
       })
 
@@ -125,7 +125,7 @@ export default function AskQuestion({ webinarId }: AskQuestionProps) {
       setPosting(true)
 
       await apiRequest({
-        endpoint: `/webinars/${webinarId}/questions`,
+        endpoint: `/api/webinars/${webinarId}/questions`,
         method: 'POST',
         body: {
           userId: user?.id,
