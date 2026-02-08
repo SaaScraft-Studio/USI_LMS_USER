@@ -74,7 +74,7 @@ export default function CourseList() {
     const fetchRegistrations = async () => {
       try {
         const res = await apiRequest<null, any>({
-          endpoint: `/course/registrations/${user.id}`,
+          endpoint: `/api/course/registrations/${user.id}`,
           method: 'GET',
         })
         setRegisteredIds(res.data.map((r: any) => r.course._id))
@@ -93,7 +93,7 @@ export default function CourseList() {
       try {
         setIsFetching(true)
         const res = await apiRequest<null, any>({
-          endpoint: '/courses/active',
+          endpoint: '/api/courses/active',
           method: 'GET',
         })
         setCourses(res.data || [])
@@ -162,7 +162,7 @@ export default function CourseList() {
       setSubmitting(true)
 
       await apiRequest({
-        endpoint: '/course/register',
+        endpoint: '/api/course/register',
         method: 'POST',
         body: {
           courseId: selectedCourse._id,
