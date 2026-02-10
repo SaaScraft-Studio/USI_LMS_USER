@@ -137,7 +137,7 @@ const [copied, setCopied] = useState(false);
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        USI LMS Registered Email Address *
+                        USI Registered Email Address *
                       </FormLabel>
                       <FormControl>
                         <Input
