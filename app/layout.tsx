@@ -33,7 +33,7 @@ export default function RootLayout({
         className={`${poppins.variable} ${francoisOne.variable} font-sans antialiased`}
       >
             {children}
-            <Toaster />
+           <Toaster richColors position="bottom-right" closeButton />
       
         
       </body>

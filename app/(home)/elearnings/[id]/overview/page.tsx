@@ -105,7 +105,21 @@ export default function ElearningDetailPage() {
     )
   }
 
-  if (!course) return <div className="p-10 text-center">Course not found</div>
+  if (!course)
+    return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="text-5xl mb-4">📚</div>
+
+      <h2 className="text-xl font-semibold mb-2">
+        No Modules Available
+      </h2>
+
+      <p className="text-gray-500 max-w-md">
+        Modules for this course haven’t been added yet.
+        Please check back later.
+      </p>
+    </div>
+  );
 
   /* ================= UI ================= */
 

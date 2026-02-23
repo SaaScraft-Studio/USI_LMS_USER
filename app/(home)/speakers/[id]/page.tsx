@@ -15,11 +15,11 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { apiRequest } from '@/lib/apiRequest'
 import { toast } from 'sonner'
-import SpeakerHeader from '@/components/SpeakerHeader'
-import { CalendarDays, Clock ,Video, MapPin } from 'lucide-react'
+import { CalendarDays, Clock, Video, MapPin } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
 import CountdownTimer from '@/components/CountdownTimer'
 import SponsorCard from '@/components/SponsorCard'
+import SpeakerCard from '@/components/SpeakerCard'
 
 /* ================= ROUTE MAP ================= */
 
@@ -32,7 +32,8 @@ const WEBINAR_ROUTE_MAP: Record<string, string> = {
 /* ================= PAGE ================= */
 
 export default function SpeakerDetailsPage() {
-  const { id } = useParams<{ id: string }>()
+  const params = useParams<{ id: string }>()
+  const id = params?.id
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
 
@@ -50,52 +51,72 @@ export default function SpeakerDetailsPage() {
   const [identifier, setIdentifier] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  /* ================= FETCH REGISTRATIONS (PRIORITY) ================= */
+  /* ================= FETCH REGISTRATIONS (SAFE FALLBACK) ================= */
 
   useEffect(() => {
-  if (!user?.id) return
+    if (!user?.id) return
 
-  apiRequest({
-    endpoint: `/api/conference/registrations/${user.id}`,
-    method: 'GET',
-  }).then((res) => {
-    setRegisteredConferenceIds(
-      res.data
-        .map((c: any) => c.conference?._id)
-        .filter(Boolean)
-    )
-  })
+    apiRequest({
+      endpoint: `/api/conference/registrations/${user.id}`,
+      method: 'GET',
+    })
+      .then((res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : []
+        setRegisteredConferenceIds(
+          list
+            .map((c: any) => c?.conference?._id)
+            .filter(Boolean)
+        )
+      })
+      .catch(() => setRegisteredConferenceIds([]))
 
-  apiRequest({
-    endpoint: `/api/webinar/registrations/${user.id}`,
-    method: 'GET',
-  }).then((res) => {
-    setRegisteredWebinarIds(
-      res.data.map((w: any) => w.webinar._id)
-    )
-  })
-}, [user?.id])
+    apiRequest({
+      endpoint: `/api/webinar/registrations/${user.id}`,
+      method: 'GET',
+    })
+      .then((res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : []
+        setRegisteredWebinarIds(
+          list
+            .map((w: any) => w?.webinar?._id)
+            .filter(Boolean)
+        )
+      })
+      .catch(() => setRegisteredWebinarIds([]))
+  }, [user?.id])
 
-
-  /* ================= FETCH SPEAKER DATA ================= */
+  /* ================= FETCH SPEAKER DATA (SAFE) ================= */
 
   useEffect(() => {
+    if (!id) return
+
     const fetchData = async () => {
       try {
-        const res = await apiRequest<null, any>({
+        const res: any = await apiRequest({
           endpoint: `/api/speakers/${id}/videos`,
           method: 'GET',
         })
 
-        setSpeaker({
-          name: `${res.speaker.prefix} ${res.speaker.speakerName}`,
-          photo: res.speaker.speakerProfilePicture,
-          qualification: res.speaker.affiliation,
-          location: `${res.speaker.state}, ${res.speaker.country}`,
-        })
+        const s = res?.speaker
 
-        setTopicVideos(res.topicVideos || [])
-        setWebinars(res.webinarVideos || [])
+        // 🛡 SAFE FALLBACK
+        setSpeaker(
+          s
+            ? {
+                name: [s?.prefix, s?.speakerName].filter(Boolean).join(' ') || 'Unnamed Speaker',
+                photo: s?.speakerProfilePicture || '/avatar.png',
+                qualification: s?.affiliation || '—',
+                location: [s?.state, s?.country].filter(Boolean).join(', ') || '—',
+              }
+            : null
+        )
+
+        setTopicVideos(Array.isArray(res?.topicVideos) ? res.topicVideos : [])
+        setWebinars(Array.isArray(res?.webinarVideos) ? res.webinarVideos : [])
+      } catch {
+        setSpeaker(null)
+        setTopicVideos([])
+        setWebinars([])
       } finally {
         setLoading(false)
       }
@@ -104,12 +125,12 @@ export default function SpeakerDetailsPage() {
     fetchData()
   }, [id])
 
-  /* ================= UNIQUE CONFERENCES ================= */
+  /* ================= UNIQUE CONFERENCES (SAFE) ================= */
 
   const conferences = useMemo(() => {
     const map = new Map<string, any>()
-    topicVideos.forEach((t) => {
-      const c = t.conferenceId
+    topicVideos.forEach((t: any) => {
+      const c = t?.conferenceId
       if (c?._id && !map.has(c._id)) {
         map.set(c._id, c)
       }
@@ -126,7 +147,7 @@ export default function SpeakerDetailsPage() {
   }
 
   const handleRegister = async () => {
-    if (!user || !selectedItem) return
+    if (!user || !selectedItem?._id) return
 
     try {
       setSubmitting(true)
@@ -143,7 +164,6 @@ export default function SpeakerDetailsPage() {
         })
 
         toast.success('Conference registered successfully 🎉')
-
         setRegisteredConferenceIds((prev) =>
           Array.from(new Set([...prev, selectedItem._id]))
         )
@@ -159,7 +179,6 @@ export default function SpeakerDetailsPage() {
         })
 
         toast.success('Webinar registered successfully 🎉')
-
         setRegisteredWebinarIds((prev) =>
           Array.from(new Set([...prev, selectedItem._id]))
         )
@@ -168,15 +187,15 @@ export default function SpeakerDetailsPage() {
       setDialogOpen(false)
       setIdentifier('')
     } catch (e: any) {
-      toast.error(e.message || 'Registration failed')
+      toast.error(e?.message || 'Registration failed')
     } finally {
       setSubmitting(false)
     }
   }
 
   const getWebinarDetailsUrl = (webinar: any) => {
-    const base = WEBINAR_ROUTE_MAP[webinar.webinarType]
-    return base ? `${base}/${webinar._id}` : `/webinar/${webinar._id}`
+    const base = WEBINAR_ROUTE_MAP[webinar?.webinarType]
+    return base ? `${base}/${webinar._id}` : `/webinar/${webinar?._id}`
   }
 
   /* ================= LOADING ================= */
@@ -199,59 +218,88 @@ export default function SpeakerDetailsPage() {
   return (
     <div className="p-6">
       {/* Breadcrumb */}
-      <div className="mb-4 text-sm text-gray-500">
-        <Link href="/speakers" className="text-orange-600">
+      <div className="mb-6 text-sm text-gray-500">
+        <Link href="/speakers" className="text-orange-600 font-medium">
           Speakers
         </Link>
         <span className="mx-2">{'>'}</span>
-        <span className="font-semibold">{speaker.name}</span>
+        <span className="font-semibold text-gray-700">{speaker.name}</span>
       </div>
 
-      {/* Top */}
-      <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-6">
-        <SpeakerHeader speaker={speaker} />
-        <SponsorCard />
-      </div>
+     {/* ================= CENTERED SPEAKER CARD ================= */}
+<div className="flex justify-center mb-8">
+  <div className="w-full max-w-2xl">
+    <SpeakerCard
+      speaker={{
+        id: id || '',
+        name: speaker?.name || 'Unnamed Speaker',
+        photo: speaker?.photo || '/avatar.png',
+        institute: speaker?.qualification || '—',
+        location: speaker?.location || '—',
+        // 🛡 SAFE FALLBACK COUNTS (based on API arrays)
+        topicVideos: Array.isArray(topicVideos) ? topicVideos.length : 0,
+        webinarVideos: Array.isArray(webinars) ? webinars.length : 0,
+        totalVideos:
+          (Array.isArray(topicVideos) ? topicVideos.length : 0) +
+          (Array.isArray(webinars) ? webinars.length : 0),
+      }}
+    />
+  </div>
+</div>
+
 
       {/* ================= CONFERENCES ================= */}
       {conferences.length > 0 && (
         <>
-          <h2 className="mt-10 mb-4 text-xl font-semibold">Conferences</h2>
+          <h2 className="mb-4 text-xl font-semibold">Conferences</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {conferences.map((c) => (
-              <Card key={c._id} className="p-0 rounded-2xl overflow-hidden shadow-md">
+              <Card
+                key={c?._id}
+                className="group p-0 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
                 <div className="relative h-[220px] w-full">
-                  <Image src={c.image} alt={c.name} fill className="object-cover" />
+                  <Image
+                    src={c?.image || '/avatar.png'}
+                    alt={c?.name || 'Conference'}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
                 </div>
 
                 <CardContent>
-                  <h3 className="font-semibold text-sm">{c.name}</h3>
+                  <h3 className="font-semibold text-sm line-clamp-2">
+                    {c?.name || 'Untitled Conference'}
+                  </h3>
+
                   <div className="mt-2 text-xs text-gray-600 flex items-center gap-2">
                     <CalendarDays size={14} />
-                    {c.startDate} – {c.endDate}
+                    {c?.startDate} – {c?.endDate}
                   </div>
-                
 
-<div className="mt-2 text-xs flex items-center gap-2">
-  {c.conferenceType === "Virtual" ? (
-    <>
-      <Video size={14} className="text-blue-600" />
-      <span className="text-blue-600 font-medium">Virtual</span>
-    </>
-  ) : (
-    <>
-      <MapPin size={14} className="text-green-600" />
-      <span className="text-green-600 font-medium">Physical</span>
-    </>
-  )}
-</div>
-
+                  <div className="mt-2 text-xs flex items-center gap-2">
+                    {c?.conferenceType === 'Virtual' ? (
+                      <>
+                        <Video size={14} className="text-blue-600" />
+                        <span className="text-blue-600 font-medium">
+                          Virtual
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin size={14} className="text-green-600" />
+                        <span className="text-green-600 font-medium">
+                          Physical
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </CardContent>
 
-                <CardFooter className='mb-4'>
-                  {registeredConferenceIds.includes(c._id) ? (
+                <CardFooter className="mb-4">
+                  {registeredConferenceIds.includes(c?._id) ? (
                     <Button
-                      onClick={() => router.push(`/conference/${c._id}`)}
+                      onClick={() => router.push(`/conference/${c?._id}`)}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       View Conference
@@ -278,36 +326,49 @@ export default function SpeakerDetailsPage() {
       {/* ================= WEBINARS ================= */}
       {webinars.length > 0 && (
         <>
-          <h2 className="mt-10 mb-4 text-xl font-semibold">Webinars</h2>
+          <h2 className="mt-10 mb-4 text-xl font-semibold">Programs</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {webinars.map((w) => (
-              <Card key={w._id} className="p-0 rounded-2xl overflow-hidden shadow-md">
+              <Card
+                key={w?._id}
+                className="group p-0 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
                 <div className="relative h-[220px] w-full">
-                  <Image src={w.image} alt={w.name} fill className="object-cover" />
+                  <Image
+                    src={w?.image || '/avatar.png'}
+                    alt={w?.name || 'Webinar'}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
                 </div>
 
                 <CardContent>
-                  <StatusBadge status={w.dynamicStatus} />
-                  <h3 className="font-semibold text-sm">{w.name}</h3>
+                  <StatusBadge status={w?.dynamicStatus} />
+                  <h3 className="font-semibold text-sm line-clamp-2">
+                    {w?.name || 'Untitled Webinar'}
+                  </h3>
 
-                  {w.dynamicStatus === 'Upcoming' && (
-                    <CountdownTimer startDate={w.startDate} startTime={w.startTime} />
+                  {w?.dynamicStatus === 'Upcoming' && (
+                    <CountdownTimer
+                      startDate={w?.startDate}
+                      startTime={w?.startTime}
+                    />
                   )}
 
                   <div className="mt-2 text-xs text-gray-600 space-y-1">
                     <div className="flex items-center gap-2">
                       <CalendarDays size={14} />
-                      {w.startDate} – {w.endDate}
+                      {w?.startDate} – {w?.endDate}
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock size={14} />
-                      {w.startTime} – {w.endTime}
+                      {w?.startTime} – {w?.endTime}
                     </div>
                   </div>
                 </CardContent>
 
-                <CardFooter className='mb-4'>
-                  {registeredWebinarIds.includes(w._id) ? (
+                <CardFooter className="mb-4">
+                  {registeredWebinarIds.includes(w?._id) ? (
                     <Button
                       onClick={() => router.push(getWebinarDetailsUrl(w))}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -332,6 +393,13 @@ export default function SpeakerDetailsPage() {
           </div>
         </>
       )}
+
+      {/* ================= CENTERED SPONSOR CARD (BOTTOM) ================= */}
+      <div className="flex justify-center mt-14">
+        <div className="w-full max-w-2xl">
+          <SponsorCard />
+        </div>
+      </div>
 
       {/* ================= REGISTER DIALOG ================= */}
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -162,7 +162,7 @@ export default function AskQuestion({ webinarId }: AskQuestionProps) {
                 value={questionText}
                 onChange={(e) => setQuestionText(e.target.value)}
                 rows={4}
-                placeholder="Type your question here..."
+               placeholder="Ask your question here. Faculty will answer during the end of the program."
                 className="w-full resize-none border rounded-lg p-3 text-sm"
                 disabled={posting}
               />

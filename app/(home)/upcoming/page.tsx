@@ -22,22 +22,16 @@ import { Button } from '@/components/ui/button'
 import SkeletonLoading from '@/components/SkeletonLoading'
 import CountdownTimer from '@/components/CountdownTimer'
 import StatusBadge from '@/components/StatusBadge'
-
+import Pagination from '@/components/Pagination'
 
 /* ---------------- DATE HELPERS ---------------- */
 
-// Converts "DD/MM/YYYY" → Date
 const parseDDMMYYYY = (dateStr: string): Date => {
   if (!dateStr) return new Date(0)
-
   const [day, month, year] = dateStr.split('/').map(Number)
-
-  // Safety guard (handles "/02/2026" bug)
   if (!day || !month || !year) return new Date(0)
-
-  return new Date(year, month - 1, day) // JS months are 0-based
+  return new Date(year, month - 1, day)
 }
-
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -88,53 +82,53 @@ export default function UpcomingWebinars() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL
 
-/* ---------------- FETCH WEBINARS ---------------- */
+  /* ---------------- FETCH WEBINARS ---------------- */
 
-const {
-  data: webinarRes,
-  isLoading: webinarsLoading,
-} = useSWR<{ data: Webinar[] }>(
-  `${API_BASE}/api/webinars/upcoming`,
-  fetcher
-)
+  const {
+    data: webinarRes,
+    isLoading: webinarsLoading,
+  } = useSWR<{ data: Webinar[] }>(
+    `${API_BASE}/api/webinars/upcoming`,
+    fetcher
+  )
 
-const webinars = webinarRes?.data ?? []
+  const webinars = webinarRes?.data ?? []
 
-/* ---------------- FETCH REGISTRATIONS ---------------- */
+  /* ---------------- FETCH REGISTRATIONS ---------------- */
 
-const {
-  data: registrationRes,
-} = useSWR<{ data: any[] }>(
-  user?.id
-    ? `${API_BASE}/api/webinar/registrations/${user.id}`
-    : null,
-  fetcher
-)
+  const { data: registrationRes } = useSWR<{ data: any[] }>(
+    user?.id
+      ? `${API_BASE}/api/webinar/registrations/${user.id}`
+      : null,
+    fetcher
+  )
 
+  // ✅ SAFE FALLBACK FIX
   const registeredIds = useMemo(() => {
-    return registrationRes?.data?.map((r) => r.webinar._id) ?? []
+    if (!Array.isArray(registrationRes?.data)) return []
+
+    return registrationRes.data
+      .map((r) => r?.webinar?._id)
+      .filter((id): id is string => typeof id === 'string')
   }, [registrationRes])
 
-  /* ---------------- SEARCH ---------------- */
+  /* ---------------- SEARCH + SORT ---------------- */
 
   const filteredWebinars = useMemo(() => {
-  let list = webinars
+    let list = webinars
 
-  // 🔍 Search
-  if (q.trim()) {
-    list = list.filter((w) =>
-      w.name.toLowerCase().includes(q.toLowerCase())
-    )
-  }
+    if (q.trim()) {
+      list = list.filter((w) =>
+        w.name.toLowerCase().includes(q.toLowerCase())
+      )
+    }
 
-  // 📅 Sort by earliest startDate
-  return [...list].sort((a, b) => {
-    const dateA = parseDDMMYYYY(a.startDate)
-    const dateB = parseDDMMYYYY(b.startDate)
-    return dateA.getTime() - dateB.getTime()
-  })
-}, [webinars, q])
-
+    return [...list].sort((a, b) => {
+      const dateA = parseDDMMYYYY(a.startDate)
+      const dateB = parseDDMMYYYY(b.startDate)
+      return dateA.getTime() - dateB.getTime()
+    })
+  }, [webinars, q])
 
   /* ---------------- PAGINATION ---------------- */
 
@@ -147,8 +141,9 @@ const {
 
   /* ---------------- REGISTER ---------------- */
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedWebinar, setSelectedWebinar] = useState<Webinar | null>(null)
+  const [open, setOpen] = useState(false)
+  const [selectedWebinar, setSelectedWebinar] =
+    useState<Webinar | null>(null)
   const [identifier, setIdentifier] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -159,7 +154,6 @@ const {
   }
 
   const handleRegister = async () => {
-    // 🔒 HARD GUARD
     if (submitting) return
     if (!selectedWebinar || !identifier || !user?.id) return
 
@@ -178,20 +172,76 @@ const {
 
       toast.success('You have successfully registered 🎉')
 
-      // ✅ Let SWR refetch
       mutate(`${API_BASE}/api/webinar/registrations/${user.id}`)
 
-      setDialogOpen(false)
+      setOpen(false)
       setIdentifier('')
     } catch (err: any) {
       toast.error(err.message || 'Registration failed')
-      setSubmitting(false) // re-enable ONLY on error
+      setSubmitting(false)
     }
   }
- /* ---------------- UI STATES ---------------- */
+
+  /* ---------------- UI STATES ---------------- */
 
   if (webinarsLoading) {
     return <SkeletonLoading />
+  }
+
+  /* ---------------- EMPTY STATE ---------------- */
+
+  if (!filteredWebinars.length) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold text-[#252641] mb-6">
+          Upcoming Programs
+        </h1>
+
+        <div className="mb-6">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search program..."
+            className="w-full sm:w-80 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-[#1F5C9E]"
+          />
+        </div>
+
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="relative w-64 h-48 mb-6">
+            <Image
+              src="/no.png"
+              alt="No programs"
+              fill
+              className="object-contain"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-500 mb-2">
+            <CalendarDays size={18} />
+            <span className="text-sm font-medium">
+              {q
+                ? 'No matching programs found'
+                : 'No upcoming programs'}
+            </span>
+          </div>
+
+          <p className="text-gray-400 text-sm max-w-md">
+            {q
+              ? 'Try adjusting your search keyword or clear the filter.'
+              : 'We’re preparing exciting new programs for you. Please check back soon.'}
+          </p>
+
+          {q && (
+            <Button
+              onClick={() => setQ('')}
+              className="mt-6 bg-blue-600 hover:bg-blue-700"
+            >
+              Clear Search
+            </Button>
+          )}
+        </div>
+      </div>
+    )
   }
 
   /* ---------------- UI ---------------- */
@@ -202,7 +252,6 @@ const {
         Upcoming Programs
       </h1>
 
-      {/* SEARCH */}
       <div className="mb-6">
         <input
           value={q}
@@ -212,7 +261,6 @@ const {
         />
       </div>
 
-      {/* CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {paginatedWebinars.map((w) => {
           const isRegistered = registeredIds.includes(w._id)
@@ -227,33 +275,34 @@ const {
                   src={w.image}
                   alt={w.name}
                   fill
-                  className="object-cover"
+                  className="object-fit"
                 />
               </div>
 
               <CardContent className="flex flex-col flex-grow">
-        <StatusBadge status={w.dynamicStatus} />
+                <StatusBadge status={w.dynamicStatus} />
+                <h3 className="font-semibold text-sm line-clamp-2">
+                  {w.name}
+                </h3>
 
-        <h3 className="font-semibold text-sm line-clamp-2">{w.name}</h3>
+                {w.dynamicStatus === 'Upcoming' && (
+                  <CountdownTimer
+                    startDate={w.startDate}
+                    startTime={w.startTime}
+                  />
+                )}
 
-        {w.dynamicStatus === 'Upcoming' && (
-          <CountdownTimer
-            startDate={w.startDate}
-            startTime={w.startTime}
-          />
-        )}
-
-        <div className="mt-3 text-xs text-gray-600 space-y-2">
-          <div className="flex items-center gap-2">
-            <CalendarDays size={14} />
-            {w.startDate} – {w.endDate}
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock size={14} />
-            {w.startTime} – {w.endTime}
-          </div>
-        </div>
-      </CardContent>
+                <div className="mt-3 text-xs text-gray-600 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays size={14} />
+                    {w.startDate} – {w.endDate}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} />
+                    {w.startTime} – {w.endTime}
+                  </div>
+                </div>
+              </CardContent>
 
               <CardFooter className="p-4 pt-0">
                 {isRegistered ? (
@@ -270,7 +319,7 @@ const {
                     disabled={!user || submitting}
                     onClick={() => {
                       setSelectedWebinar(w)
-                      setDialogOpen(true)
+                      setOpen(true)
                     }}
                     className="w-full bg-green-600 hover:bg-green-700"
                   >
@@ -283,36 +332,43 @@ const {
         })}
       </div>
 
-      {/* REGISTER DIALOG */}
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent>
-          <div className="space-y-4">
-            <h2 className="text-center text-lg font-semibold text-blue-600">
-              Register for FREE
-            </h2>
-
-            <input
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              disabled={submitting}
-              placeholder="USI No | Email | Mobile"
-              className="w-full border rounded px-4 py-2"
+       {/* PAGINATION COMPONENT */}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={setPage}
             />
-
-            <Button
-              onClick={handleRegister}
-              disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              {submitting ? 'Submitting...' : 'Submit'}
-            </Button>
-
-            <AlertDialogCancel disabled={submitting}>
-              Cancel
-            </AlertDialogCancel>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+      
+            {/* REGISTER DIALOG */}
+            <AlertDialog open={open} onOpenChange={setOpen}>
+            <AlertDialogContent>
+              { (
+                <div className="space-y-4">
+                  <h2 className="text-center text-lg font-semibold text-blue-600">
+                    Register for FREE
+                  </h2>
+      
+                  <input
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    disabled={submitting}
+                    placeholder="USI No | Email | Mobile"
+                    className="w-full border rounded px-4 py-2"
+                  />
+      
+                  <Button
+                    onClick={handleRegister}
+                    disabled={submitting}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {submitting ? 'Submitting...' : 'Submit'}
+                  </Button>
+      
+                  <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+                </div>
+              )}
+            </AlertDialogContent>
+          </AlertDialog>
     </div>
   )
 }

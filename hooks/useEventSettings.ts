@@ -24,5 +24,6 @@ export function useEventSettings(eventId?: string, enabled?: boolean) {
     quiz: !!data.data.quiz,
     meeting: !!data.data.meeting,
     question: !!data.data.question,
+    summary: !!data.data.summary,
   } satisfies EventSettings
 }

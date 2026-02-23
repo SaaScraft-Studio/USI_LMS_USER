@@ -162,34 +162,43 @@ export default function LoginPage() {
     }
   }
 
-  /* ----------------------------- VERIFY OTP ----------------------------- */
-  const verifyOtp = async (values: OtpValues) => {
-    if (!userId || verifyingOtp) return
+/* ----------------------------- VERIFY OTP ----------------------------- */
+const verifyOtp = async (values: OtpValues) => {
+  if (!userId || verifyingOtp) return
 
-    try {
-      setVerifyingOtp(true)
+  try {
+    setVerifyingOtp(true)
 
-      const res = await apiRequest<
-        { userId: string; otp: string },
-        { user: any }
-      >({
-        endpoint: '/api/users/verify-otp',
-        method: 'POST',
-        body: { userId, otp: values.otp },
-      })
+    const res = await apiRequest<
+      { userId: string; otp: string },
+      { user: any }
+    >({
+      endpoint: '/api/users/verify-otp',
+      method: 'POST',
+      body: { userId, otp: values.otp },
+    })
 
-      setUser(res.user)
-      await hydrate()
+    setUser(res.user)
+    await hydrate()
 
-      toast.success('Login successful')
-      router.replace('/upcoming')
-    } catch (e: any) {
-      otpForm.setError('otp', {
-        message: e.message || 'Invalid or expired OTP',
-      })
-      setVerifyingOtp(false)
-    }
+    toast.success('Login successful 🎉')
+
+    router.replace('/upcoming')
+  } catch (e: any) {
+    const message = e?.message || 'Invalid or expired OTP'
+
+    // Form-level error
+    otpForm.setError('otp', {
+      message,
+    })
+
+    // Global toast error
+    toast.error(message)
+
+    setVerifyingOtp(false)
   }
+}
+
 
   /* -------------------------------------------------------------------------- */
   /*                                   UI                                       */

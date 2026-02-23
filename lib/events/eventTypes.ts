@@ -35,6 +35,7 @@ export type EventSettings = {
   quiz: boolean
   meeting: boolean
   question: boolean
+  summary: boolean
 }
 
 export type MeetingData = {

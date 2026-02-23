@@ -37,7 +37,7 @@ export function useEventList(type: EventType) {
           endpoint: eventConfig[type].listEndpoint,
           method: 'GET',
         })
-        setEvents(res.data || [])
+        setEvents(Array.isArray(res?.data) ? res.data : [])
       } catch {
         setEvents([])
       } finally {
@@ -55,7 +55,9 @@ export function useEventList(type: EventType) {
 
     if (q.trim()) {
       const query = q.toLowerCase()
-      list = list.filter((e) => e.name.toLowerCase().includes(query))
+      list = list.filter((e) =>
+        e?.name?.toLowerCase()?.includes(query)
+      )
     }
 
     return list
@@ -64,8 +66,8 @@ export function useEventList(type: EventType) {
   /* ---------------- SORT (GLOBAL, BEFORE PAGINATION) ---------------- */
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const d1 = parseDMY(a.startDate)
-      const d2 = parseDMY(b.startDate)
+      const d1 = parseDMY(a?.startDate ?? '')
+      const d2 = parseDMY(b?.startDate ?? '')
       return sortOrder === 'newest' ? d2 - d1 : d1 - d2
     })
   }, [filtered, sortOrder])
@@ -76,7 +78,10 @@ export function useEventList(type: EventType) {
   }, [sortOrder, tab, q])
 
   /* ---------------- PAGINATION ---------------- */
-  const totalPages = Math.ceil(sorted.length / PAGE_SIZE)
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sorted.length / PAGE_SIZE)
+  )
 
   const paginated = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE

@@ -71,12 +71,43 @@ export default function ProgramSchedulePage({ params }: PageProps) {
     )
   }, [data])
 
+  /* ================= SORTED DATES (DD/MM/YYYY SAFE) ================= */
+
+  const parseIndianDate = (dateStr?: string) => {
+    if (!dateStr) return null
+    const [day, month, year] = dateStr.split('/').map(Number)
+    if (!day || !month || !year) return null
+    return new Date(year, month - 1, day) // JS month is 0-indexed
+  }
+
   const dates = useMemo(() => {
     if (!data?.data) return []
-    return Array.from(
-      new Set(data.data.map((t: any) => t.sessionId.sessionDate))
-    )
+
+    // 1️⃣ Get unique dates safely
+    const uniqueDates = Array.from(
+      new Set(
+        data.data
+          .map((t: any) => t?.sessionId?.sessionDate)
+          .filter(Boolean)
+      )
+    ) as string[]
+
+    // 2️⃣ Sort ascending (DD/MM/YYYY aware)
+    uniqueDates.sort((a, b) => {
+      const da = parseIndianDate(a)
+      const db = parseIndianDate(b)
+
+      // 🛡 Safe fallback if parsing fails
+      if (!da && !db) return 0
+      if (!da) return 1
+      if (!db) return -1
+
+      return da.getTime() - db.getTime()
+    })
+
+    return uniqueDates
   }, [data])
+
 
   /* ================= GROUP DATA ================= */
 
@@ -126,7 +157,21 @@ export default function ProgramSchedulePage({ params }: PageProps) {
       group.sessions.get(sid).topics.push(t)
     })
 
-    return Array.from(map.values())
+    const groups = Array.from(map.values())
+
+    groups.sort((a, b) => {
+      const da = parseIndianDate(a.date)
+      const db = parseIndianDate(b.date)
+
+      if (!da && !db) return 0
+      if (!da) return 1
+      if (!db) return -1
+
+      return da.getTime() - db.getTime()
+    })
+
+    return groups
+
   }, [data, search, activeHall, activeDate, halls])
 
   if (isLoading) {
@@ -138,6 +183,44 @@ export default function ProgramSchedulePage({ params }: PageProps) {
       </div>
     )
   }
+
+ 
+  // ===== NO DATA UI =====
+if (!grouped.length) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
+      
+      {/* Topic Icon */}
+      <div className="bg-blue-50 p-6 rounded-full mb-6">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-14 w-14 text-blue-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8 10h8M8 14h5m-9 5l3-3h11a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12l3-3z"
+          />
+        </svg>
+      </div>
+
+      {/* Title */}
+      <h2 className="text-2xl font-semibold mb-3">
+        No Topics Found
+      </h2>
+
+      {/* Description */}
+      <p className="text-gray-500 max-w-md">
+        There are currently no topics available for this session.
+        Please check back later for updates.
+      </p>
+    </div>
+  )
+}
 
   return (
     <div className="p-6 space-y-6">
@@ -203,9 +286,8 @@ export default function ProgramSchedulePage({ params }: PageProps) {
             <button
               key={String(hall)}
               onClick={() => setActiveHall(String(hall))}
-              className={`px-4 py-2 rounded-lg text-white text-sm ${
-                HALL_COLORS[i % 10]
-              } ${activeHall === hall ? 'ring-2 ring-gray' : ''}`}
+              className={`px-4 py-2 rounded-lg text-white text-sm ${HALL_COLORS[i % 10]
+                } ${activeHall === hall ? 'ring-2 ring-gray' : ''}`}
             >
               {String(hall)}
             </button>
@@ -218,9 +300,8 @@ export default function ProgramSchedulePage({ params }: PageProps) {
       {grouped.map((group, i) => (
         <div key={i} className="space-y-0">
           <div
-            className={`text-white text-center py-3 rounded-t-lg ${
-              HALL_COLORS[group.hallIndex % 10]
-            }`}
+            className={`text-white text-center py-3 rounded-t-lg ${HALL_COLORS[group.hallIndex % 10]
+              }`}
           >
             {group.date} – {group.hall}
           </div>

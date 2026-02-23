@@ -22,8 +22,6 @@ import {
   Star,
   ThumbsUp,
   AlertCircle,
-  Sparkles,
-  BarChart3,
   Clock,
 } from 'lucide-react'
 

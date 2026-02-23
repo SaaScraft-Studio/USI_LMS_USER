@@ -99,62 +99,99 @@ export default function Faculty({ webinarId }: { webinarId: string }) {
   )
 
   /* ================= CARD ================= */
+function Card({ f }: { f: FacultyItem }) {
+  return (
+    <Link href={`/speakers/${f.id}`} className="block">
+      <div
+        className="
+          group
+          relative
+          overflow-hidden
+          rounded-2xl
+          border
+          bg-white
+          p-5
+          shadow-sm
+          transition-all
+          duration-300
+          hover:shadow-2xl
+          hover:-translate-y-1
+          hover:border-blue-200
+        "
+      >
+        {/* Gradient Hover Glow */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-300 bg-gradient-to-br from-blue-50 via-transparent to-blue-100 pointer-events-none" />
 
-  function Card({ f }: { f: FacultyItem }) {
-    return (
-      <div className="border rounded-xl p-4 flex gap-4 bg-white">
-        <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-          {f.photo ? (
-            <Image
-              src={f.photo}
-              alt={f.name}
-              width={80}
-              height={80}
-              className="object-cover"
-            />
-          ) : (
-            <span className="text-xl font-semibold text-gray-600">
-              {f.name
-                .split(' ')
-                .map((n) => n[0])
-                .slice(0, 2)
-                .join('')
-                .toUpperCase()}
-            </span>
-          )}
-        </div>
+        <div className="relative z-10 flex gap-4">
+          {/* Profile Image */}
+          <div
+            className="
+              relative
+              w-20
+              h-20
+              rounded-full
+              overflow-hidden
+              border-2
+              border-blue-100
+              ring-2
+              ring-transparent
+              group-hover:ring-blue-200
+              transition-all
+              duration-300
+              flex-shrink-0
+            "
+          >
+            {f.photo ? (
+              <Image
+                src={f.photo}
+                alt={f.name}
+                fill
+                className="object-cover object-center group-hover:scale-105 transition duration-300"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-600 font-semibold text-lg">
+                {f.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()}
+              </div>
+            )}
+          </div>
 
-        <div className="space-y-1">
-          <Link href={`/speakers/${f.id}`}>
-            <h3 className="text-[#1F5C9E] font-semibold hover:underline">
+          {/* Info Section */}
+          <div className="min-w-0 space-y-2">
+            <h3 className="text-base font-semibold text-[#1F5C9E] leading-tight line-clamp-2">
               {f.name}
             </h3>
-          </Link>
 
-          {f.title && (
-            <div className="flex items-center gap-2 text-sm">
-              <Briefcase size={14} />
-              <span>{f.title}</span>
-            </div>
-          )}
+            {f.title && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Briefcase size={14} className="text-gray-400" />
+                <span className="line-clamp-1">{f.title}</span>
+              </div>
+            )}
 
-          {f.institution && (
-            <div className="flex items-center gap-2 text-sm">
-              <Building2 size={14} />
-              <span>{f.institution}</span>
-            </div>
-          )}
+            {f.institution && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Building2 size={14} className="text-gray-400" />
+                <span className="line-clamp-1">{f.institution}</span>
+              </div>
+            )}
 
-          {f.location && (
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin size={14} />
-              <span>{f.location}</span>
-            </div>
-          )}
+            {f.location && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <MapPin size={14} className="text-gray-400" />
+                <span className="line-clamp-1">{f.location}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    )
-  }
+    </Link>
+  )
+}
 
   /* ================= SECTION ================= */
 

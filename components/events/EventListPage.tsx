@@ -1,8 +1,6 @@
 // components/events/EventListPage.tsx
 'use client'
-
 import { useState, useEffect } from 'react'
-import getPaginationPages from '@/utils/getPaginationPages'
 import {
   Select,
   SelectContent,
@@ -19,6 +17,7 @@ import { eventConfig } from '@/lib/events/eventConfig'
 import EventCard from './EventCard'
 import EventRegisterDialog from './EventRegisterDialog'
 import { apiRequest } from '@/lib/apiRequest'
+import Pagination from '../Pagination'
 
 interface Props {
   type: EventType
@@ -30,7 +29,6 @@ export default function EventListPage({ type }: Props) {
 
   const [loadingRegs, setLoadingRegs] = useState(true)
   const [registeredIds, setRegisteredIds] = useState<string[]>([])
-  const [jumpPage, setJumpPage] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selected, setSelected] = useState<EventListItem | null>(null)
 
@@ -63,7 +61,12 @@ export default function EventListPage({ type }: Props) {
           endpoint: `/api/webinar/registrations/${user.id}`,
           method: 'GET',
         })
-        setRegisteredIds(res.data.map((r: any) => r.webinar._id))
+        const ids =
+          res?.data
+            ?.map((r: any) => r?.webinar?._id)
+            ?.filter((id: any): id is string => Boolean(id)) ?? []
+
+        setRegisteredIds(ids)
       } catch {
         setRegisteredIds([])
       } finally {
@@ -99,11 +102,10 @@ export default function EventListPage({ type }: Props) {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`pb-1 text-sm font-medium ${
-              tab === t
-                ? 'text-orange-600 border-b-2 border-orange-600'
-                : 'text-gray-500'
-            }`}
+            className={`pb-1 text-sm font-medium ${tab === t
+              ? 'text-orange-600 border-b-2 border-orange-600'
+              : 'text-gray-500'
+              }`}
           >
             {t}
           </button>
@@ -132,9 +134,13 @@ export default function EventListPage({ type }: Props) {
 
       {/* CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {loadingRegs
-          ? Array.from({ length: 4 }).map((_, i) => <SkeletonLoading key={i} />)
-          : events.map((e) => (
+        {loadingRegs ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonLoading key={i} />
+          ))
+        ) : events?.length > 0 ? (
+          events.map((e) =>
+            e?._id ? (
               <EventCard
                 key={e._id}
                 event={e}
@@ -145,77 +151,41 @@ export default function EventListPage({ type }: Props) {
                   setDialogOpen(true)
                 }}
               />
-            ))}
+            ) : null
+          )
+        ) : (
+          <div className="col-span-full flex flex-col items-center justify-center py-16">
+            <img
+              src="/no.png"
+              alt="No program"
+              className="w-50 h-50 object-cover"
+            />
+
+            <p className="text-gray-500 text-sm mb-4">
+              No program found matching your search criteria.
+            </p>
+
+            {(q || tab !== 'All') && (
+              <Button
+                onClick={() => {
+                  setQ('')
+                  setTab('All')
+                }}
+                className="mt-6 bg-blue-600 hover:bg-blue-700"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-10">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Prev
-          </Button>
-
-          {getPaginationPages(page, totalPages).map((item, idx) =>
-            item === 'dots' ? (
-              <span key={idx} className="px-2 text-gray-500">
-                ...
-              </span>
-            ) : (
-              <Button
-                key={item}
-                size="sm"
-                variant={page === item ? 'default' : 'outline'}
-                className={
-                  page === item
-                    ? 'bg-orange-600 text-white hover:bg-orange-700'
-                    : 'border-gray-300 text-gray-700 hover:border-orange-600 hover:text-orange-600'
-                }
-                onClick={() => setPage(item)}
-              >
-                {item}
-              </Button>
-            )
-          )}
-
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Next
-          </Button>
-
-          {/* Jump to page */}
-          <div className="flex items-center gap-2 ml-2">
-            <span className="text-sm">Go to</span>
-            <input
-              type="number"
-              placeholder='3'
-              min={1}
-              max={totalPages}
-              value={jumpPage}
-              onChange={(e) => setJumpPage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const p = Number(jumpPage)
-                  if (p >= 1 && p <= totalPages) {
-                    setPage(p)
-                    setJumpPage('')
-                  }
-                }
-              }}
-              className="w-16 px-2 py-1 border rounded text-sm"
-            />
-          </div>
-        </div>
-      )}
-
+     {/* Pagination */}
+     <Pagination
+  page={page}
+  totalPages={totalPages}
+  onChange={setPage}
+/>
       <EventRegisterDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}

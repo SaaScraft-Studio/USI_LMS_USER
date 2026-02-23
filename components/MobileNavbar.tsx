@@ -57,11 +57,11 @@ const menuItems = [
     href: '/myprofile',
     icon: <UserCircle size={20} />,
   },
-  {
-    name: 'Payment History',
-    href: '/mypayments',
-    icon: <CreditCard size={20} />,
-  },
+  // {
+  //   name: 'Payment History',
+  //   href: '/mypayments',
+  //   icon: <CreditCard size={20} />,
+  // },
 ]
 
 export default function MobileNavbarAdmin() {

@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import DOMPurify from 'dompurify'
 import { useAuthStore } from '@/stores/authStore'
 import SponsorCard from '@/components/SponsorCard'
-import getPaginationPages from '@/utils/getPaginationPages'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/fetcher'
 import { apiRequest } from '@/lib/apiRequest'
-
+import Image from 'next/image'
+import { Building, MapPin, Film, GraduationCap } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import Pagination from '@/components/Pagination'
 
 const COMMENTS_LIMIT = 50
 
@@ -155,28 +157,39 @@ export default function TopicDetailPage() {
             </div>
           )}
 
-          {/* ===== TABS ===== */}
-          <div className="flex gap-2 border-b">
-            {['overview', 'faculty'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab as any)}
-                className={`px-4 py-2 font-semibold rounded-t-lg text-sm ${
-                  activeTab === tab
-                    ? 'bg-orange-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {tab === 'overview' ? 'Overview' : 'Faculty'}
-              </button>
-            ))}
-          </div>
+         {/* ===== TABS ===== */}
+<div className="flex gap-3 border-b pb-3 overflow-x-auto">
+  {['overview', 'faculty'].map((tab) => (
+    <button
+      key={tab}
+      onClick={() => setActiveTab(tab as any)}
+      className={`capitalize px-4 py-1.5 rounded-md text-sm transition-colors ${
+        activeTab === tab
+          ? 'bg-[#E8F3FF] text-orange-600 font-semibold'
+          : 'text-gray-600 hover:bg-gray-100'
+      }`}
+    >
+      {tab}
+    </button>
+  ))}
+</div>
 
           {/* ===== OVERVIEW ===== */}
           {activeTab === 'overview' && (
             <div className="bg-white rounded-2xl border p-6 space-y-6">
               <div
-                className="prose max-w-none"
+                className="
+    prose
+    max-w-none
+    prose-lg
+    text-gray-700
+    break-words
+    [&_ol]:list-decimal
+    [&_ul]:list-disc
+    [&_ol]:pl-6
+    [&_ul]:pl-6
+    [&_li]:ml-1
+  "
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(topic.description),
                 }}
@@ -194,7 +207,7 @@ export default function TopicDetailPage() {
                 <button
                   onClick={handlePostComment}
                   disabled={posting}
-                  className="bg-orange-600 text-white px-6 py-2 rounded-lg text-sm"
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg text-sm"
                 >
                   {posting ? 'Posting...' : 'Post Comment'}
                 </button>
@@ -205,61 +218,60 @@ export default function TopicDetailPage() {
                 {comments.map((c: any) => (
                   <div key={c._id} className="border rounded-lg p-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={c.userId.profilePicture}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
+
+                      {/* SAFE AVATAR */}
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+                        <Image
+                          src={c?.userId?.profilePicture || '/avatar.png'}
+                          alt={c?.userId?.name || 'User'}
+                          fill
+                          sizes="32px"
+                          className="object-cover"
+                        />
+                      </div>
+
                       <div>
                         <p className="text-sm font-semibold">
-                          {c.userId.name}
+                          {c?.userId?.name || 'Anonymous User'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(c.createdAt).toLocaleString()}
+                          {c?.createdAt
+                            ? new Date(c.createdAt).toLocaleString()
+                            : ''}
                         </p>
                       </div>
                     </div>
-                    <p className="mt-2 text-sm">{c.comment}</p>
+
+                    <p className="mt-2 text-sm">{c?.comment}</p>
                   </div>
                 ))}
               </div>
 
               {/* PAGINATION */}
-              {totalPages > 1 && (
-                <div className="flex justify-center gap-2 pt-4">
-                  {getPaginationPages(page, totalPages).map((p, i) =>
-                    p === 'dots' ? (
-                      <span key={i} className="px-3 py-1 text-gray-500">
-                        …
-                      </span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => {
-                          setPage(p)
-                          mutateComments(p)
-                        }}
-                        className={`px-3 py-1 rounded-md text-sm ${
-                          p === page
-                            ? 'bg-orange-600 text-white'
-                            : 'border hover:bg-gray-100'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-                </div>
-              )}
+              <Pagination
+  page={page}
+  totalPages={totalPages}
+  onChange={setPage}
+/>
             </div>
           )}
 
           {/* ===== FACULTY ===== */}
           {activeTab === 'faculty' && (
             <div className="bg-white rounded-2xl border p-6 space-y-8">
+
+              {/* ===== CHAIRPERSONS (TOP) ===== */}
+              {topic?.sessionId?.chairperson?.length > 0 && (
+                <FacultySection
+                  title="Chairpersons"
+                  data={topic.sessionId.chairperson}
+                />
+              )}
+
               {topic.topicType === 'Presentation' &&
                 topic.speakerId?.length === 1 && (
                   <FacultySection
-                    title="Presenter Name"
+                    title="Speaker"
                     data={[topic.speakerId[0]]}
                   />
                 )}
@@ -323,33 +335,130 @@ export default function TopicDetailPage() {
   )
 }
 
-/* ================= FACULTY SECTION ================= */
+/* ================= FACULTY SECTION (PREMIUM UI - SAME AS SPEAKER CARD) ================= */
+
+
 
 function FacultySection({ title, data }: any) {
   const router = useRouter()
 
+  if (!Array.isArray(data) || data.length === 0) return null
+
   return (
     <div>
       <h3 className="font-semibold mb-4">{title}</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {data.map((sp: any) => (
-          <div
-            key={sp._id}
-            onClick={() => router.push(`/speakers/${sp._id}`)}
-            className="cursor-pointer border rounded-xl p-4 text-center hover:shadow transition"
-          >
-            <img
-              src={sp.speakerProfilePicture}
-              className="w-20 h-20 mx-auto rounded-full object-cover"
-            />
-            <p className="mt-2 font-semibold">
-              {sp.prefix} {sp.speakerName}
-            </p>
-            <p className="text-xs text-gray-600">{sp.affiliation}</p>
-            <p className="text-xs text-gray-500">{sp.country}</p>
-          </div>
-        ))}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-5">
+        {data.map((sp: any) => {
+          const name =
+            [sp?.prefix, sp?.speakerName].filter(Boolean).join(' ') ||
+            'Unnamed Speaker'
+
+          const institute = sp?.affiliation || '—'
+          const location =
+            [sp?.state, sp?.country].filter(Boolean).join(', ') ||
+            sp?.country ||
+            '—'
+
+          return (
+            <Card
+              key={sp?._id}
+              onClick={() =>
+                sp?._id && router.push(`/speakers/${sp._id}`)
+              }
+              className="
+                group
+                relative
+                overflow-hidden
+                rounded-2xl
+                border
+                bg-white
+                p-5
+                shadow-sm
+                transition-all
+                duration-300
+                hover:shadow-2xl
+                hover:-translate-y-1
+                hover:border-blue-200
+                cursor-pointer
+              "
+            >
+              {/* Gradient Hover Glow (SAME AS SPEAKER CARD) */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-300 bg-gradient-to-br from-blue-50 via-transparent to-blue-100 pointer-events-none" />
+
+              {/* TOP ROW: IMAGE + NAME */}
+              <div className="relative z-10 flex items-center gap-4">
+                {/* Profile Image */}
+                <div
+                  className="
+                    relative
+                    w-16
+                    h-16
+                    sm:w-18
+                    sm:h-18
+                    rounded-full
+                    overflow-hidden
+                    border-2
+                    border-blue-100
+                    ring-2
+                    ring-transparent
+                    group-hover:ring-blue-200
+                    transition-all
+                    duration-300
+                    flex-shrink-0
+                    bg-gray-100
+                  "
+                >
+                  <Image
+                    src={sp?.speakerProfilePicture || '/avatar.png'}
+                    alt={name}
+                    fill
+                    sizes="64px"
+                    className="object-cover object-center group-hover:scale-105 transition duration-300"
+                  />
+                </div>
+
+                {/* Name + Institute */}
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-[#1F5C9E] leading-tight line-clamp-2">
+                    {name}
+                  </h3>
+
+                  <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
+                    <Building size={16} className="text-gray-400" />
+                    <span className="line-clamp-1">
+                      {institute}
+                    </span>
+                  </div>
+
+                  {/* Location */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <MapPin size={16} className="text-gray-400" />
+                  <span className="line-clamp-1">
+                    {location}
+                  </span>
+                </div>
+                </div>
+              </div>
+
+              {/* BELOW CONTENT (FULL WIDTH) */}
+              <div className="relative z-10 mt-1 space-y-3">
+
+                {/* ROLE BADGE (Since faculty has no stats) */}
+                <div className="rounded-lg bg-blue-50 px-3 py-2 text-center transition group-hover:bg-blue-100">
+                  <div className="flex items-center justify-center gap-1 text-blue-600">
+                    <GraduationCap size={14} />
+                    <span className="text-sm font-medium">
+                      {title}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )
 }
+

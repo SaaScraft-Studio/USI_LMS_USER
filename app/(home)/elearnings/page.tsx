@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { CalendarDays, Clock } from 'lucide-react'
+import { CalendarDays, Clock, BookOpen } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,10 +22,11 @@ import { useAuthStore } from '@/stores/authStore'
 import { apiRequest } from '@/lib/apiRequest'
 import { toast } from 'sonner'
 import SkeletonLoading from '@/components/SkeletonLoading'
+import Pagination from '@/components/Pagination'
 
 /* ---------------- CONSTANTS ---------------- */
 
-const ITEMS_PER_PAGE = 9
+const ITEMS_PER_PAGE = 20
 
 /* ---------------- TYPES ---------------- */
 
@@ -56,17 +57,15 @@ export default function CourseList() {
   const [courses, setCourses] = useState<Course[]>([])
   const [isFetching, setIsFetching] = useState(true)
 
-  /* dialog */
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+  const [open, setOpen] = useState(false)
+  const [selectedCourse, setSelectedCourse] =
+    useState<Course | null>(null)
   const [identifier, setIdentifier] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  /* registered */
   const [registeredIds, setRegisteredIds] = useState<string[]>([])
 
-
-  /* ---------------- FETCH REGISTRATIONS ---------------- */
+  /* ---------------- FETCH REGISTRATIONS (SAFE) ---------------- */
 
   useEffect(() => {
     if (!user?.id) return
@@ -77,9 +76,17 @@ export default function CourseList() {
           endpoint: `/api/course/registrations/${user.id}`,
           method: 'GET',
         })
-        setRegisteredIds(res.data.map((r: any) => r.course._id))
+
+        // ✅ SAFE fallback
+        const safeIds = Array.isArray(res?.data)
+          ? res.data
+              .map((r: any) => r?.course?._id)
+              .filter((id: any) => typeof id === 'string')
+          : []
+
+        setRegisteredIds(safeIds)
       } catch {
-        /* silent */
+        setRegisteredIds([])
       }
     }
 
@@ -96,7 +103,8 @@ export default function CourseList() {
           endpoint: '/api/courses/active',
           method: 'GET',
         })
-        setCourses(res.data || [])
+
+        setCourses(Array.isArray(res?.data) ? res.data : [])
       } catch {
         setCourses([])
       } finally {
@@ -107,25 +115,23 @@ export default function CourseList() {
     fetchCourses()
   }, [])
 
-  
-
-  /* ---------------- FILTER (NO SORT HERE) ---------------- */
+  /* ---------------- FILTER ---------------- */
 
   const filtered = useMemo(() => {
     if (!q.trim()) return courses
 
     return courses.filter((c) =>
-      c.courseName.toLowerCase().includes(q.trim().toLowerCase())
+      c?.courseName
+        ?.toLowerCase()
+        .includes(q.trim().toLowerCase())
     )
   }, [courses, q])
-
-  /* ---------------- RESET PAGE ONLY ON SEARCH ---------------- */
 
   useEffect(() => {
     setPage(1)
   }, [q])
 
-  /* ---------------- PAGINATION FIRST ---------------- */
+  /* ---------------- PAGINATION ---------------- */
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
 
@@ -134,12 +140,12 @@ export default function CourseList() {
     return filtered.slice(start, start + ITEMS_PER_PAGE)
   }, [filtered, page])
 
-  /* ---------------- SORT ONLY CURRENT PAGE ---------------- */
+  /* ---------------- SORT ---------------- */
 
   const paginatedCourses = useMemo(() => {
     return [...pageSlice].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime()
-      const dateB = new Date(b.createdAt).getTime()
+      const dateA = new Date(a?.createdAt).getTime()
+      const dateB = new Date(b?.createdAt).getTime()
 
       return sortOrder === 'newest'
         ? dateB - dateA
@@ -172,11 +178,16 @@ export default function CourseList() {
       })
 
       toast.success('Successfully registered 🎉')
-      setRegisteredIds((prev) => [...prev, selectedCourse._id])
-      setDialogOpen(false)
+
+      setRegisteredIds((prev) => [
+        ...prev,
+        selectedCourse._id,
+      ])
+
+      setOpen(false)
       setIdentifier('')
     } catch (err: any) {
-      toast.error(err.message || 'Registration failed')
+      toast.error(err?.message || 'Registration failed')
     } finally {
       setSubmitting(false)
     }
@@ -188,11 +199,90 @@ export default function CourseList() {
     return <SkeletonLoading />
   }
 
+  /* ---------------- EMPTY STATE ---------------- */
+
+  if (filtered.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold text-[#252641] mb-6">
+          E-Learning
+        </h1>
+
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search courses..."
+            className="w-full sm:w-80 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-[#1F5C9E]"
+          />
+
+          <Select
+            value={sortOrder}
+            onValueChange={(v) =>
+              setSortOrder(v as SortOrder)
+            }
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">
+                Newest First
+              </SelectItem>
+              <SelectItem value="oldest">
+                Oldest First
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          {/* Illustration */}
+          <div className="relative w-64 h-48 mb-6">
+            <Image
+              src="/no.png"
+              alt="No courses"
+              fill
+              className="object-contain"
+            />
+          </div>
+
+          {/* Icon + Title */}
+          <div className="flex items-center gap-2 text-gray-500 mb-2">
+            <BookOpen size={18} />
+            <span className="text-sm font-medium">
+              {q
+                ? 'No matching courses found'
+                : 'No courses available'}
+            </span>
+          </div>
+
+          <p className="text-gray-400 text-sm max-w-md">
+            {q
+              ? 'Try adjusting your search keyword or clear the filter.'
+              : 'New learning programs will be available soon.'}
+          </p>
+
+          {q && (
+            <Button
+              onClick={() => setQ('')}
+              className="mt-6 bg-blue-600 hover:bg-blue-700"
+            >
+              Clear Search
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   /* ---------------- UI ---------------- */
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold text-[#252641] mb-6">E-Learning</h1>
+      <h1 className="text-2xl font-semibold text-[#252641] mb-6">
+        E-Learning
+      </h1>
 
       {/* SEARCH + SORT */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -211,8 +301,12 @@ export default function CourseList() {
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="newest">Newest First</SelectItem>
-            <SelectItem value="oldest">Oldest First</SelectItem>
+            <SelectItem value="newest">
+              Newest First
+            </SelectItem>
+            <SelectItem value="oldest">
+              Oldest First
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -226,33 +320,36 @@ export default function CourseList() {
           >
             <div className="relative h-[250px] w-full overflow-hidden">
               <Image
-                src={c.image || '/avatar.png'}
-                alt={c.courseName}
+                src={c?.image || '/avatar.png'}
+                alt={c?.courseName || 'Course'}
                 fill
-                className="object-fit transition-transform duration-500 group-hover:scale-110"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
               />
             </div>
 
             <CardContent className="p-3 flex-grow">
               <h3 className="font-semibold text-sm line-clamp-2">
-                {c.courseName}
+                {c?.courseName}
               </h3>
 
               <div className="mt-3 text-xs text-gray-600 space-y-2">
                 <div className="flex items-center gap-2">
                   <CalendarDays size={14} />
-                  {c.startDate} – {c.endDate}
+                  {c?.startDate} – {c?.endDate}
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock size={14} />
-                  {c.startTime} – {c.endTime}
+                  {c?.startTime} – {c?.endTime}
                 </div>
               </div>
             </CardContent>
 
             <CardFooter className="p-4 pt-0">
               {registeredIds.includes(c._id) ? (
-                <Link href={`/elearnings/${c._id}/overview`} className="w-full">
+                <Link
+                  href={`/elearnings/${c._id}/overview`}
+                  className="w-full"
+                >
                   <Button className="w-full bg-blue-600 hover:bg-blue-700">
                     View Details
                   </Button>
@@ -261,7 +358,7 @@ export default function CourseList() {
                 <Button
                   onClick={() => {
                     setSelectedCourse(c)
-                    setDialogOpen(true)
+                    setOpen(true)
                   }}
                   className={`w-full ${
                     c.registrationType === 'free'
@@ -278,84 +375,43 @@ export default function CourseList() {
           </Card>
         ))}
       </div>
-
-      {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-10">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Prev
-          </Button>
-
-          {Array.from({ length: totalPages }).map((_, i) => {
-            const p = i + 1
-            return (
-              <Button
-                key={p}
-                size="sm"
-                variant={page === p ? 'default' : 'outline'}
-                className={page === p ? 'bg-blue-600 text-white' : ''}
-                onClick={() => setPage(p)}
-              >
-                {p}
-              </Button>
-            )
-          })}
-
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      )}
-
-      {/* REGISTER DIALOG */}
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent>
-          {selectedCourse?.registrationType === 'paid' ? (
-            <div className="space-y-4 text-center">
-              <h2 className="text-lg font-semibold">
-                Payment integration coming soon
-              </h2>
-              <AlertDialogCancel disabled={submitting}>Close</AlertDialogCancel>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <h2 className="text-center text-lg font-semibold text-blue-600">
-                Register for FREE
-              </h2>
-
-              <input
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                disabled={submitting}
-                placeholder="USI Number | Email | Mobile"
-                className="w-full border rounded px-4 py-2"
-              />
-
-              <Button
-                onClick={handleRegister}
-                disabled={submitting}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {submitting ? 'Submitting...' : 'Submit'}
-              </Button>
-
-              <AlertDialogCancel disabled={submitting}>
-                Cancel
-              </AlertDialogCancel>
-            </div>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* PAGINATION COMPONENT */}
+                  <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onChange={setPage}
+                  />
+            
+                  {/* REGISTER DIALOG */}
+                  <AlertDialog open={open} onOpenChange={setOpen}>
+                  <AlertDialogContent>
+                    { (
+                      <div className="space-y-4">
+                        <h2 className="text-center text-lg font-semibold text-blue-600">
+                          Register for FREE
+                        </h2>
+            
+                        <input
+                          value={identifier}
+                          onChange={(e) => setIdentifier(e.target.value)}
+                          disabled={submitting}
+                          placeholder="USI No | Email | Mobile"
+                          className="w-full border rounded px-4 py-2"
+                        />
+            
+                        <Button
+                          onClick={handleRegister}
+                          disabled={submitting}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          {submitting ? 'Submitting...' : 'Submit'}
+                        </Button>
+            
+                        <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+                      </div>
+                    )}
+                  </AlertDialogContent>
+                </AlertDialog>
     </div>
   )
 }

@@ -29,7 +29,7 @@ export default function FAQ({ webinarId }: { webinarId: string }) {
     const fetchFAQ = async () => {
       try {
         const res = await apiRequest({
-          endpoint: `/webinars/${webinarId}/qna`,
+          endpoint: `/api/webinars/${webinarId}/qna`,
           method: 'GET',
         })
 

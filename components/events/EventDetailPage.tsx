@@ -10,7 +10,8 @@ import {
   Lock,
   MessageSquarePlus,
 } from 'lucide-react'
-
+import { toast } from "sonner"
+import Summary from '@/components/Summary'
 import Overview from '@/components/Overview'
 import Faculty from '@/components/Faculty'
 import FAQ from '@/components/FAQ'
@@ -29,10 +30,17 @@ import { eventConfig } from '@/lib/events/eventConfig'
 import { useEventAccess } from '@/hooks/useEventAccess'
 import { useEventSettings } from '@/hooks/useEventSettings'
 import { useEventMeeting } from '@/hooks/useEventMeeting'
-import { useEventComments } from '@/hooks/useEventComments'
 import { apiRequest } from '@/lib/apiRequest'
+import { getIndianFormattedDate } from '@/lib/formatIndianDate'
 
-type TabType = 'overview' | 'faculty' | 'faq' | 'feedback' | 'quiz' | 'question'
+type TabType =
+  | 'summary'
+  | 'overview'
+  | 'faculty'
+  | 'faq'
+  | 'feedback'
+  | 'quiz'
+  | 'question'
 
 interface Props {
   type: EventType
@@ -43,24 +51,17 @@ export default function EventDetailPage({ type }: Props) {
   const router = useRouter()
   const cfg = eventConfig[type]
 
-  const { user, isLoading } = useAuthStore()
+  const { user } = useAuthStore()
 
   const { event, hasAccess, loading } = useEventAccess(id, user?.id)
   const settings = useEventSettings(id, hasAccess)
   const meeting = useEventMeeting(id, settings?.meeting)
 
-  const {
-    comments,
-    commentText,
-    setCommentText,
-    addComment,
-    posting,
-  } = useEventComments(id, hasAccess, user?.id)
-
   const [tab, setTab] = useState<TabType>('overview')
 
   const availableTabs = useMemo<TabType[]>(() => {
     const t: TabType[] = ['overview']
+    if (settings?.summary) t.push('summary')
     if (settings?.faculty) t.push('faculty')
     if (settings?.faq) t.push('faq')
     if (settings?.feedback) t.push('feedback')
@@ -73,40 +74,39 @@ export default function EventDetailPage({ type }: Props) {
     if (!event) return {} as any
 
     return {
-      overview: (
-        <Overview
-          description={DOMPurify.sanitize(event.description)}
-          comments={comments}
-          commentText={commentText}
-          setCommentText={setCommentText}
-          onAddComment={addComment}
-          posting={posting || isLoading}
-        />
-      ),
+      overview: <Overview description={DOMPurify.sanitize(event.description)} />,
+      summary: <Summary webinarId={id} />,
       faculty: <Faculty webinarId={id} />,
       faq: <FAQ webinarId={id} />,
       feedback: <Feedback webinarId={id} />,
       quiz: <QuizTab webinarId={id} webinarTitle={event.name} />,
       question: <AskQuestion webinarId={id} />,
     }
-  }, [event, comments, commentText, posting, id, settings, isLoading])
+  }, [event, id])
 
-  useEffect(() => {
-    if (!hasAccess || !id) return
+ 
 
-    const captureAttendance = async () => {
-      try {
-        await apiRequest({
-          endpoint: `/api/webinar/${id}/attend`,
-          method: 'POST',
-        })
-      } catch {
-        // silent
-      }
+useEffect(() => {
+  if (!hasAccess || !id) return
+
+  const captureAttendance = async () => {
+    try {
+      await apiRequest({
+        endpoint: `/api/webinar/${id}/attend`,
+        method: 'POST',
+      })
+
+      toast.success('Your Attendance Marked Successfully !', {
+        description: getIndianFormattedDate(),
+      })
+
+    } catch (error) {
+      console.log("Attendance can be marked before and after 15 minutes")
     }
+  }
 
-    captureAttendance()
-  }, [hasAccess, id])
+  captureAttendance()
+}, [hasAccess, id])
 
   if (loading) return <WebinarSkeleton />
 

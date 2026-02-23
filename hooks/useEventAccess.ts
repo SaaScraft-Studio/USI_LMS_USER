@@ -41,15 +41,18 @@ export function useEventAccess(eventId?: string, userId?: string) {
     }
   }
 
-  const registeredIds =
-    regRes?.data?.map((r) => r.webinar._id) ?? []
+const registeredIds =
+  regRes?.data
+    ?.map((r) => r?.webinar?._id)
+    ?.filter((id): id is string => Boolean(id)) ?? []
+
 
   const hasAccess =
     !!eventId && registeredIds.includes(eventId)
 
   return {
-    event: hasAccess ? eventRes?.data ?? null : null,
-    hasAccess,
-    loading: false,
-  }
+  event: hasAccess && eventRes?.data ? eventRes.data : null,
+  hasAccess,
+  loading: false,
+}
 }

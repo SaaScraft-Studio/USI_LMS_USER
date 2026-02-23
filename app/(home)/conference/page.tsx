@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { CalendarDays, Hotel } from 'lucide-react'
-import { Monitor, MapPin } from 'lucide-react'
+import {
+  CalendarDays,
+  Hotel,
+  Monitor,
+  MapPin,
+  Users,
+} from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -23,11 +28,11 @@ import { useAuthStore } from '@/stores/authStore'
 import { apiRequest } from '@/lib/apiRequest'
 import { toast } from 'sonner'
 import SkeletonLoading from '@/components/SkeletonLoading'
+import Pagination from '@/components/Pagination'
 
 /* ---------------- CONSTANTS ---------------- */
 
 const PAGE_SIZE = 20
-
 type ConferenceTypeFilter = 'Virtual' | 'Physical' | 'All'
 
 /* ---------------- TYPES ---------------- */
@@ -52,33 +57,36 @@ export default function ConferenceList() {
   const user = useAuthStore((state) => state.user)
 
   const [q, setQ] = useState('')
-  const [typeFilter, setTypeFilter] = useState<ConferenceTypeFilter>('All')
+  const [typeFilter, setTypeFilter] =
+    useState<ConferenceTypeFilter>('All')
   const [page, setPage] = useState(1)
 
   const [conferences, setConferences] = useState<Conference[]>([])
   const [isFetching, setIsFetching] = useState(true)
 
-  /* dialog */
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [open, setOpen] = useState(false)
   const [selectedConference, setSelectedConference] =
     useState<Conference | null>(null)
   const [identifier, setIdentifier] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  /* registered */
   const [registeredIds, setRegisteredIds] = useState<string[]>([])
 
-  /* ---------------- FETCH CONFERENCES ---------------- */
+  /* ---------------- FETCH CONFERENCES (SAFE) ---------------- */
 
   useEffect(() => {
     const fetchConferences = async () => {
       try {
         setIsFetching(true)
+
         const res = await apiRequest<null, any>({
           endpoint: '/api/conferences/active',
           method: 'GET',
         })
-        setConferences(res.data || [])
+
+        setConferences(
+          Array.isArray(res?.data) ? res.data : []
+        )
       } catch {
         setConferences([])
       } finally {
@@ -89,7 +97,7 @@ export default function ConferenceList() {
     fetchConferences()
   }, [])
 
-  /* ---------------- FETCH REGISTRATIONS ---------------- */
+  /* ---------------- FETCH REGISTRATIONS (SAFE) ---------------- */
 
   useEffect(() => {
     if (!user?.id) return
@@ -100,9 +108,17 @@ export default function ConferenceList() {
           endpoint: `/api/conference/registrations/${user.id}`,
           method: 'GET',
         })
-        setRegisteredIds(res.data.map((r: any) => r.conference._id))
+
+        // ✅ SAFE fallback
+        const safeIds = Array.isArray(res?.data)
+          ? res.data
+              .map((r: any) => r?.conference?._id)
+              .filter((id: any) => typeof id === 'string')
+          : []
+
+        setRegisteredIds(safeIds)
       } catch {
-        /* silent */
+        setRegisteredIds([])
       }
     }
 
@@ -115,15 +131,19 @@ export default function ConferenceList() {
     let list = conferences
 
     if (typeFilter !== 'All') {
-      list = list.filter((c) => c.conferenceType === typeFilter)
+      list = list.filter(
+        (c) => c?.conferenceType === typeFilter
+      )
     }
 
     if (!q.trim()) return list
 
-    return list.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()))
+    return list.filter((c) =>
+      c?.name
+        ?.toLowerCase()
+        .includes(q.toLowerCase())
+    )
   }, [conferences, q, typeFilter])
-
-  /* ---------------- RESET PAGE ---------------- */
 
   useEffect(() => {
     setPage(1)
@@ -147,7 +167,8 @@ export default function ConferenceList() {
   }
 
   const handleRegister = async () => {
-    if (!selectedConference || !identifier || !user?.id) return
+    if (!selectedConference || !identifier || !user?.id)
+      return
 
     try {
       setSubmitting(true)
@@ -162,12 +183,21 @@ export default function ConferenceList() {
         },
       })
 
-      toast.success('You have successfully registered 🎉')
-      setRegisteredIds((prev) => [...prev, selectedConference._id])
-      setDialogOpen(false)
+      toast.success(
+        'You have successfully registered 🎉'
+      )
+
+      setRegisteredIds((prev) => [
+        ...prev,
+        selectedConference._id,
+      ])
+
+      setOpen(false)
       setIdentifier('')
     } catch (err: any) {
-      toast.error(err.message || 'Registration failed')
+      toast.error(
+        err?.message || 'Registration failed'
+      )
     } finally {
       setSubmitting(false)
     }
@@ -179,6 +209,92 @@ export default function ConferenceList() {
     return <SkeletonLoading />
   }
 
+  /* ---------------- EMPTY STATE ---------------- */
+
+  if (filtered.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold text-[#252641] mb-6">
+          USI Conferences
+        </h1>
+
+        {/* Search + Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search conferences..."
+            className="w-full sm:w-80 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-[#1F5C9E]"
+          />
+
+          <Select
+            value={typeFilter}
+            onValueChange={(v) =>
+              setTypeFilter(
+                v as ConferenceTypeFilter
+              )
+            }
+          >
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder="Conference Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">
+                All
+              </SelectItem>
+              <SelectItem value="Virtual">
+                Virtual
+              </SelectItem>
+              <SelectItem value="Physical">
+                Physical
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          {/* Illustration */}
+          <div className="relative w-64 h-48 mb-6">
+            <Image
+              src="/no.png"
+              alt="No conferences"
+              fill
+              className="object-contain"
+            />
+          </div>
+
+          {/* Icon + Title */}
+          <div className="flex items-center gap-2 text-gray-500 mb-2">
+            <Users size={18} />
+            <span className="text-sm font-medium">
+              {q || typeFilter !== 'All'
+                ? 'No matching conferences found'
+                : 'No active conferences available'}
+            </span>
+          </div>
+
+          <p className="text-gray-400 text-sm max-w-md">
+            {q || typeFilter !== 'All'
+              ? 'Try adjusting your search or filter selection.'
+              : 'New conferences will be announced soon.'}
+          </p>
+
+          {(q || typeFilter !== 'All') && (
+            <Button
+              onClick={() => {
+                setQ('')
+                setTypeFilter('All')
+              }}
+              className="mt-6 bg-blue-600 hover:bg-blue-700"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   /* ---------------- UI ---------------- */
 
   return (
@@ -187,7 +303,7 @@ export default function ConferenceList() {
         USI Conferences
       </h1>
 
-      {/* SEARCH + TYPE FILTER */}
+      {/* SEARCH + FILTER */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <input
           value={q}
@@ -198,15 +314,23 @@ export default function ConferenceList() {
 
         <Select
           value={typeFilter}
-          onValueChange={(v) => setTypeFilter(v as ConferenceTypeFilter)}
+          onValueChange={(v) =>
+            setTypeFilter(v as ConferenceTypeFilter)
+          }
         >
           <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="Conference Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="All">All</SelectItem>
-            <SelectItem value="Virtual">Virtual</SelectItem>
-            <SelectItem value="Physical">Physical</SelectItem>
+            <SelectItem value="All">
+              All
+            </SelectItem>
+            <SelectItem value="Virtual">
+              Virtual
+            </SelectItem>
+            <SelectItem value="Physical">
+              Physical
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -220,10 +344,10 @@ export default function ConferenceList() {
           >
             <div className="relative h-[250px]">
               <Image
-                src={c.image}
-                alt={c.name}
+                src={c?.image || '/avatar.png'}
+                alt={c?.name || 'Conference'}
                 fill
-                className="object-fit group-hover:scale-110 transition"
+                className="object-cover group-hover:scale-110 transition"
               />
             </div>
 
@@ -243,25 +367,31 @@ export default function ConferenceList() {
                 {c.conferenceType}
               </div>
 
-              <h3 className="font-semibold text-sm line-clamp-2">{c.name}</h3>
+              <h3 className="font-semibold text-sm line-clamp-2">
+                {c?.name}
+              </h3>
+
               <div className="text-xs text-gray-600">
                 <div className="flex items-center gap-2">
                   <Hotel size={14} />
-                  {c.venueName || 'N/A'}
+                  {c?.venueName || 'N/A'}
                 </div>
               </div>
 
               <div className="text-xs text-gray-600">
                 <div className="flex items-center gap-2">
                   <CalendarDays size={14} />
-                  {c.startDate} – {c.endDate}
+                  {c?.startDate} – {c?.endDate}
                 </div>
               </div>
             </CardContent>
 
             <CardFooter className="p-4 pt-0">
               {registeredIds.includes(c._id) ? (
-                <Link href={`/conference/${c._id}`} className="w-full">
+                <Link
+                  href={`/conference/${c._id}`}
+                  className="w-full"
+                >
                   <Button className="w-full bg-blue-600 hover:bg-blue-700">
                     View Details
                   </Button>
@@ -270,7 +400,7 @@ export default function ConferenceList() {
                 <Button
                   onClick={() => {
                     setSelectedConference(c)
-                    setDialogOpen(true)
+                    setOpen(true)
                   }}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
@@ -281,48 +411,17 @@ export default function ConferenceList() {
           </Card>
         ))}
       </div>
-
-      {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-10">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Prev
-          </Button>
-
-          {Array.from({ length: totalPages }).map((_, i) => {
-            const p = i + 1
-            return (
-              <Button
-                key={p}
-                size="sm"
-                variant={page === p ? 'default' : 'outline'}
-                className={page === p ? 'bg-blue-600 text-white' : ''}
-                onClick={() => setPage(p)}
-              >
-                {p}
-              </Button>
-            )
-          })}
-
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+      {/* PAGINATION COMPONENT */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={setPage}
+      />
 
       {/* REGISTER DIALOG */}
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogContent>
+        { (
           <div className="space-y-4">
             <h2 className="text-center text-lg font-semibold text-blue-600">
               Register for FREE
@@ -346,8 +445,9 @@ export default function ConferenceList() {
 
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        )}
+      </AlertDialogContent>
+    </AlertDialog>
     </div>
   )
 }

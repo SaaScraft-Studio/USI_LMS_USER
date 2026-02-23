@@ -7,8 +7,8 @@ import {
   Search,
   CalendarDays,
   Clock,
-  ChevronLeft,
-  ChevronRight,
+  BookOpen,
+  MapPin,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -18,12 +18,13 @@ import SkeletonLoading from '@/components/SkeletonLoading'
 import { useAuthStore } from '@/stores/authStore'
 import { fetcher } from '@/lib/fetcher'
 import useSWR from 'swr'
+import Pagination from '@/components/Pagination'
 
 /* ================= TYPES ================= */
 
 type RegistrationItem = {
   registrationId: string
-  type: 'course' | 'webinar'
+  type: 'course' | 'webinar' | 'conference'
   details: any
   registeredOn: string
 }
@@ -33,6 +34,7 @@ type RegistrationsResponse = {
   total: number
   coursesCount: number
   webinarsCount: number
+  conferencesCount: number
   data: RegistrationItem[]
 }
 
@@ -48,7 +50,7 @@ export default function MyLearningPage() {
 
   const { user, isLoading } = useAuthStore()
 
-  /* ================= FETCH (GET → fetcher) ================= */
+  /* ================= FETCH ================= */
 
   const { data, isLoading: isFetching } = useSWR<RegistrationsResponse>(
     !isLoading && user?.id
@@ -57,10 +59,15 @@ export default function MyLearningPage() {
     fetcher
   )
 
-  // ✅ FIXED: backend returns `data: RegistrationItem[]`
-  const items: RegistrationItem[] = Array.isArray(data?.data)
+  const rawItems: RegistrationItem[] = Array.isArray(data?.data)
     ? data!.data
     : []
+
+  /* ================= REMOVE BROKEN RECORDS ================= */
+
+  const items = useMemo(() => {
+    return rawItems.filter((item) => item?.details?._id)
+  }, [rawItems])
 
   /* ================= SEARCH ================= */
 
@@ -68,15 +75,14 @@ export default function MyLearningPage() {
     const q = search.trim().toLowerCase()
     if (!q) return items
 
-    return items.filter((item: RegistrationItem) =>
-      (
+    return items.filter((item) => {
+      const title =
         item.type === 'course'
-          ? item.details.courseName
-          : item.details.name
-      )
-        ?.toLowerCase()
-        .includes(q)
-    )
+          ? item.details?.courseName
+          : item.details?.name
+
+      return title?.toLowerCase().includes(q)
+    })
   }, [search, items])
 
   /* ================= PAGINATION ================= */
@@ -92,10 +98,11 @@ export default function MyLearningPage() {
     setPage(1)
   }, [search])
 
-  /* ================= HELPERS ================= */
+  /* ================= ACTION CONFIG ================= */
 
   const getActionConfig = (item: RegistrationItem) => {
-    const id = item.details._id
+    const id = item?.details?._id
+    if (!id) return null
 
     if (item.type === 'course') {
       return {
@@ -105,7 +112,7 @@ export default function MyLearningPage() {
     }
 
     if (item.type === 'webinar') {
-      switch (item.details.webinarType) {
+      switch (item.details?.webinarType) {
         case 'Live Operative Workshops':
           return { label: 'Go To Workshop', href: `/workshop/${id}` }
         case 'Smart Learning Program':
@@ -114,6 +121,13 @@ export default function MyLearningPage() {
           return { label: 'Go To Webinar', href: `/webinar/${id}` }
         default:
           return null
+      }
+    }
+
+    if (item.type === 'conference') {
+      return {
+        label: 'Go To Conference',
+        href: `/conference/${id}`,
       }
     }
 
@@ -126,6 +140,63 @@ export default function MyLearningPage() {
     return <SkeletonLoading />
   }
 
+  /* ================= EMPTY STATE ================= */
+
+  if (filteredItems.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold mb-6 text-[#0d2540]">
+          My Learning
+        </h1>
+
+        <div className="relative mb-8 w-full max-w-sm">
+          <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title"
+            className="pl-10 pr-5 py-2 w-full border rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="relative w-64 h-48 mb-6">
+            <Image
+              src="/no.png"
+              alt="No learning content"
+              fill
+              className="object-contain"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-500 mb-2">
+            <BookOpen size={18} />
+            <span className="text-sm font-medium">
+              {search
+                ? 'No matching results found'
+                : 'No learning content yet'}
+            </span>
+          </div>
+
+          <p className="text-gray-400 text-sm max-w-md">
+            {search
+              ? 'Try adjusting your search keyword or clear the filter.'
+              : 'You haven’t registered for any courses, webinars, or conferences yet.'}
+          </p>
+
+          {search && (
+            <Button
+              onClick={() => setSearch('')}
+              className="mt-6 bg-blue-600 hover:bg-blue-700"
+            >
+              Clear Search
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   /* ================= UI ================= */
 
   return (
@@ -134,7 +205,6 @@ export default function MyLearningPage() {
         My Learning
       </h1>
 
-      {/* Search */}
       <div className="relative mb-8 w-full max-w-sm">
         <Search className="absolute left-3 top-3 text-gray-400" size={18} />
         <input
@@ -145,92 +215,73 @@ export default function MyLearningPage() {
         />
       </div>
 
-      {/* Cards */}
-      {paginatedItems.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {paginatedItems.map((item: RegistrationItem) => {
-            const { details } = item
-            const action = getActionConfig(item)
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {paginatedItems.map((item) => {
+          const { details } = item
+          const action = getActionConfig(item)
 
-            return (
-              <Card
-                key={item.registrationId}
-                className="p-0 group rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition hover:-translate-y-1 flex flex-col"
-              >
-                {/* Image */}
-                <div className="relative h-[250px] w-full overflow-hidden">
-                  <Image
-                    src={details.image || '/avatar.png'}
-                    alt={details.courseName || details.name}
-                    fill
-                    className="object-fit transition-transform duration-500 group-hover:scale-110"
-                  />
-                </div>
+          return (
+            <Card
+              key={item.registrationId}
+              className="p-0 group rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition hover:-translate-y-1 flex flex-col"
+            >
+              <div className="relative h-[250px] w-full overflow-hidden">
+                <Image
+                  src={details?.image || '/avatar.png'}
+                  alt={details?.courseName || details?.name || 'Learning'}
+                  fill
+                  className="object-fit transition-transform duration-500 group-hover:scale-110"
+                />
+              </div>
 
-                <CardContent className="flex-grow">
-                  <div className="text-xs text-gray-600 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays size={14} />
-                      {details.startDate} – {details.endDate}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} />
-                      {details.startTime} – {details.endTime}
-                    </div>
+              <CardContent className="flex-grow">
+                <div className="text-xs text-gray-600 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays size={14} />
+                    {details?.startDate} – {details?.endDate}
                   </div>
 
-                  <h3 className="mt-3 font-semibold text-sm line-clamp-2">
-                    {details.courseName || details.name}
-                  </h3>
-                </CardContent>
+                  {/* Show time only if exists */}
+                  {details?.startTime && (
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} />
+                      {details?.startTime} – {details?.endTime}
+                    </div>
+                  )}
 
-                {action && (
-                  <CardFooter className="p-4 pt-0">
-                    <Link href={action.href} className="w-full">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                        {action.label}
-                      </Button>
-                    </Link>
-                  </CardFooter>
-                )}
-              </Card>
-            )
-          })}
-        </div>
-      )}
+                  {/* Show venue for conference */}
+                  {item.type === 'conference' && details?.venueName && (
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} />
+                      {details?.venueName}
+                    </div>
+                  )}
+                </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-10">
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={page === 1}
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          >
-            <ChevronLeft size={18} />
-          </Button>
+                <h3 className="mt-3 font-semibold text-sm line-clamp-2">
+                  {details?.courseName || details?.name}
+                </h3>
+              </CardContent>
 
-          <span className="text-sm font-medium">
-            Page {page} of {totalPages}
-          </span>
+              {action && (
+                <CardFooter className="p-4 pt-0">
+                  <Link href={action.href} className="w-full">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                      {action.label}
+                    </Button>
+                  </Link>
+                </CardFooter>
+              )}
+            </Card>
+          )
+        })}
+      </div>
 
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-          >
-            <ChevronRight size={18} />
-          </Button>
-        </div>
-      )}
-
-      {filteredItems.length === 0 && (
-        <p className="text-center text-gray-500 mt-10">
-          No registrations found.
-        </p>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={setPage}
+      />
     </div>
   )
 }
