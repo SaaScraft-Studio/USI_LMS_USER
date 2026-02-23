@@ -7,7 +7,7 @@ import DOMPurify from 'dompurify'
 import { useAuthStore } from '@/stores/authStore'
 import { Download, ExternalLink } from 'lucide-react'
 import SponsorCard from '@/components/SponsorCard'
-import getPaginationPages from '@/utils/getPaginationPages'
+import Pagination from '@/components/Pagination'
 
 /* ================= CONSTANTS ================= */
 
@@ -296,32 +296,11 @@ export default function ModuleLecturePage() {
             ))}
 
             {/* PAGINATION */}
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-2 pt-4">
-                {getPaginationPages(page, totalPages).map((p, i) =>
-                  p === 'dots' ? (
-                    <span key={i} className="px-3 py-1 text-gray-400">
-                      …
-                    </span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => {
-                        setPage(p)
-                        fetchComments(p)
-                      }}
-                      className={`px-3 py-1 rounded-md text-sm ${
-                        p === page
-                          ? 'bg-orange-600 text-white'
-                          : 'border hover:bg-gray-100'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  )
-                )}
-              </div>
-            )}
+             <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onChange={setPage}
+                  />
           </div>
         </div>
 
